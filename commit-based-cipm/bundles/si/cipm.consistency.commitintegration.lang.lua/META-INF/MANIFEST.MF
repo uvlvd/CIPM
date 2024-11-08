@@ -9,12 +9,11 @@ Export-Package: cipm.consistency.commitintegration.lang.lua,
  cipm.consistency.commitintegration.lang.lua.appspace,
  cipm.consistency.commitintegration.lang.lua.appspace.detection,
  cipm.consistency.commitintegration.lang.lua.changeresolution
+Import-Package: org.apache.commons.lang3;version="3.14.0"
 Require-Bundle: tools.vitruv.change.composite,
  tools.vitruv.framework.vsum,
  org.eclipse.xtend.lib,
  org.eclipse.xtext.testing;bundle-version="2.28.0",
- org.apache.commons.io,
- org.xtext.lua;visibility:=reexport,
  cipm.consistency.models,
  org.apache.log4j,
  edu.kit.ipd.sdq.commons.util.emf;bundle-version="2.0.0",
@@ -23,4 +22,7 @@ Require-Bundle: tools.vitruv.change.composite,
  org.eclipse.emf.edit;bundle-version="2.17.0",
  cipm.consistency.commitintegration;bundle-version="1.0.0",
  cipm.consistency.tools.evaluation.data,
- org.xtext.lua.tests;bundle-version="1.0.0"
+ org.xtext.lua.tests;bundle-version="1.0.0",
+ org.xtext.lua.component_extension;bundle-version="0.1.0",
+ org.xtext.lua;bundle-version="1.0.0",
+ org.apache.commons.io

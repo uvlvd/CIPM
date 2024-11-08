@@ -7,23 +7,41 @@ import java.util.stream.Collectors;
 
 import org.apache.log4j.Logger;
 import org.eclipse.xtext.EcoreUtil2;
+
+import lua.Chunk;
+import org.xtext.lua.component_extension.Application;
+
+/*
 import org.xtext.lua.LuaUtil;
-import org.xtext.lua.lua.Chunk;
-import org.xtext.lua.lua.ComponentSet;
 import org.xtext.lua.lua.Expression_Functioncall_Direct;
 import org.xtext.lua.lua.Expression_String;
 import org.xtext.lua.lua.Expression_VariableName;
 import org.xtext.lua.lua.Statement_Function_Declaration;
 import org.xtext.lua.scoping.LuaLinkingService;
+*/
 
 public class LuaPostProcessor {
     private static final Logger LOGGER = Logger.getLogger(LuaPostProcessor.class.getName());
+    
+
+    /**
+     * Post process the given component set, so it can be used for change propagation
+     * 
+     * 
+     * @param application
+     */
+    public static void postProcessComponentSet(Application application) {
+        //resolveMockedAndServedFunctions(application);
+
+        sortComponentSet(application);
+    }
 
     /*
      * Get all functions that were mocked during the linking of the code model
      */
-    private static Map<String, Statement_Function_Declaration> getMockedFunctions(ComponentSet set) {
-        for (var component : set.getComponents()) {
+    /*
+    private static Map<String, Statement_Function_Declaration> getMockedFunctions(Application application) {
+        for (var component : application.getComponents()) {
             if (component.getName()
                 .equals(LuaLinkingService.MOCK_URI.path())) {
                 Map<String, Statement_Function_Declaration> mapping = new HashMap<>();
@@ -36,16 +54,19 @@ public class LuaPostProcessor {
         }
         return null;
     }
+    */
 
     /*
      * Get all functions that are served in the application
      */
-    private static Map<String, Statement_Function_Declaration> getServedFunctionsOfComponentSet(ComponentSet set) {
+    /*
+    private static Map<String, Statement_Function_Declaration> getServedFunctionsOfComponentSet(Application application) {
+    	
         Map<String, Statement_Function_Declaration> servedFuncs = new HashMap<>();
 
         final String serveFunctionName = "Script.serveFunction";
 
-        var directCalls = EcoreUtil2.getAllContentsOfType(set, Expression_Functioncall_Direct.class);
+        var directCalls = EcoreUtil2.getAllContentsOfType(application, Expression_Functioncall_Direct.class);
 
         // iterate over all function calls which may be calls to "Script.serveFunction"
         for (var directCall : directCalls) {
@@ -96,13 +117,14 @@ public class LuaPostProcessor {
         }
 
         return servedFuncs;
-    }
+       
+    } */
 
-    private static void sortComponentSet(ComponentSet set) {
+    private static void sortComponentSet(Application application) {
 
         // we cannot call sort on the EList directly, so we sort in a temporary array instead
 
-        var components = set.getComponents()
+        var components = application.getComponents()
             .stream()
             .collect(Collectors.toList());
 
@@ -124,9 +146,9 @@ public class LuaPostProcessor {
         });
 
         // dirty
-        set.getComponents()
+        application.getComponents()
             .removeAll(components);
-        set.getComponents()
+        application.getComponents()
             .addAll(components);
     }
 
@@ -134,15 +156,17 @@ public class LuaPostProcessor {
      * function calls which were mocked, but are served by another component must be resolved to the
      * actually served function
      */
-    private static void resolveMockedAndServedFunctions(ComponentSet set) {
+    /*
+    private static void resolveMockedAndServedFunctions(Application application) {
+    	
         // find functions that were mocked during the linking process, because the were not in scope
-        var mockedFuncs = getMockedFunctions(set);
+        var mockedFuncs = getMockedFunctions(application);
         if (mockedFuncs == null) {
             return;
         }
 
         // find functions that are served by apps to other apps
-        var servedFuncs = getServedFunctionsOfComponentSet(set);
+        var servedFuncs = getServedFunctionsOfComponentSet(application);
 
         for (var served : servedFuncs.entrySet()) {
             var mockedFunc = mockedFuncs.get(served.getKey());
@@ -150,7 +174,7 @@ public class LuaPostProcessor {
                 LOGGER.trace(String.format("MOCKED but SERVED function: %s", served.getKey()));
                 var servedFunc = served.getValue();
 
-                var refs = EcoreUtil2.getAllContentsOfType(set, Expression_Functioncall_Direct.class);
+                var refs = EcoreUtil2.getAllContentsOfType(application, Expression_Functioncall_Direct.class);
                 for (var ref : refs) {
                     if (ref.getCalledFunction()
                         .equals(mockedFunc)) {
@@ -160,17 +184,7 @@ public class LuaPostProcessor {
                 }
             }
         }
-    }
+        
+    }*/
 
-    /**
-     * Post process the given component set, so it can be used for change propagation
-     * 
-     * 
-     * @param set
-     */
-    public static void postProcessComponentSet(ComponentSet set) {
-        resolveMockedAndServedFunctions(set);
-
-        sortComponentSet(set);
-    }
 }

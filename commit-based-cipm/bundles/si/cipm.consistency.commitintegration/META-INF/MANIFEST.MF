@@ -11,7 +11,6 @@ Export-Package: cipm.consistency.commitintegration,
 Require-Bundle: org.apache.log4j,
  org.eclipse.jgit,
  org.emftext.language.java,
- org.apache.commons.io,
  org.eclipse.xtend.lib,
  cipm.consistency.commitintegration.settings,
  org.palladiosimulator.pcm,
@@ -21,6 +20,7 @@ Require-Bundle: org.apache.log4j,
  cipm.consistency.models.instrumentation,
  tools.vitruv.framework.vsum;bundle-version="3.0.0",
  cipm.consistency.models,
- cipm.consistency.commitintegration.lang.lua.runtimedata;bundle-version="1.0.0"
+ cipm.consistency.commitintegration.lang.lua.runtimedata;bundle-version="1.0.0",
+ org.apache.commons.io
 Automatic-Module-Name: cipm.consistency.commitintegration
 Bundle-RequiredExecutionEnvironment: JavaSE-13

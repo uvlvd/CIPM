@@ -13,7 +13,7 @@ import org.eclipse.xtext.EcoreUtil2;
 import org.palladiosimulator.pcm.seff.AbstractAction;
 import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.Component;
-import org.xtext.lua.lua.ComponentSet;
+import org.xtext.lua.component_extension.Application;
 import org.xtext.lua.lua.Expression_Functioncall_Direct;
 import org.xtext.lua.lua.Expression_String;
 import org.xtext.lua.lua.Expression_VariableName;

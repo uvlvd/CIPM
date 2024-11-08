@@ -19,9 +19,12 @@ import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.resource.XtextResource;
 import org.eclipse.xtext.resource.XtextResourceSet;
 import org.xtext.lua.LuaStandaloneSetup;
-import org.xtext.lua.lua.Chunk;
-import org.xtext.lua.lua.ComponentSet;
-import org.xtext.lua.lua.LuaFactory;
+//import org.xtext.lua.LuaStandaloneSetup;
+//import lua.Chunk;
+import org.xtext.lua.component_extension.Application;
+//import org.xtext.lua.component_extension.lua.LuaFactory;
+import org.xtext.lua.component_extension.Component_extensionFactory;
+import lua.Chunk;
 
 import com.google.inject.Inject;
 import com.google.inject.Injector;
@@ -34,13 +37,14 @@ import cipm.consistency.commitintegration.lang.detection.strategy.ComponentDetec
 import cipm.consistency.models.code.CodeModelFacade;
 import cipm.consistency.tools.evaluation.data.EvaluationDataContainer;
 
+
 public class LuaModelFacade implements CodeModelFacade {
     private static final Logger LOGGER = Logger.getLogger(LuaModelFacade.class.getName());
     private LuaDirLayout dirLayout;
     private ComponentDetector componentDetector;
 
     // TODO tracking the last component set is a bit ugly here
-    private ComponentSet currentComponentSet;
+    private Application currentApplication;
     private Resource currentResource;
 
     @Inject
@@ -198,12 +202,12 @@ public class LuaModelFacade implements CodeModelFacade {
      * @return
      * @throws IOException
      */
-    private ComponentSet resolveResourceSetToComponents(Path workTree, ResourceSet rs, URI targetUri) {
+    private Application resolveResourceSetToComponents(Path workTree, ResourceSet rs, URI targetUri) {
         LOGGER.debug("Resolving ResourceSet into a ComponentSet");
         var merge = getCleanResource(targetUri);
-
+        
         // we use this synthetic model class as a container for all the components
-        ComponentSet componentSet = LuaFactory.eINSTANCE.createComponentSet();
+        Application componentSet = Component_extensionFactory.eINSTANCE.createApplication();
         merge.getContents()
             .add(componentSet);
 
@@ -240,7 +244,7 @@ public class LuaModelFacade implements CodeModelFacade {
 
         // Create the detected components and add them to the component set
         actualComponents.forEach((componentName, resources) -> {
-            var component = LuaFactory.eINSTANCE.createComponent();
+            var component = Component_extensionFactory.eINSTANCE.createComponent();
             component.setName(componentName);
 
             for (var resource : resources) {
@@ -249,7 +253,7 @@ public class LuaModelFacade implements CodeModelFacade {
                     var eObj = resource.getContents()
                         .get(0);
                     if (eObj instanceof Chunk) {
-                        var namedChunk = LuaFactory.eINSTANCE.createNamedChunk();
+                        var namedChunk = Component_extensionFactory.eINSTANCE.createNamedChunk();
                         namedChunk.setChunk((Chunk) eObj);
                         var chunkName = resource.getURI()
                             .lastSegment();
@@ -288,14 +292,14 @@ public class LuaModelFacade implements CodeModelFacade {
 
         // where the processed resource is stored prior to propagation
         var storeUri = dirLayout.getParsedFileUri();
-        currentComponentSet = resolveResourceSetToComponents(sourceCodeDir, workTreeResourceSet, storeUri);
+        currentApplication = resolveResourceSetToComponents(sourceCodeDir, workTreeResourceSet, storeUri);
 
-        if (!validateEObject(currentComponentSet)) {
+        if (!validateEObject(currentApplication)) {
             LOGGER.error("Code model is invalid!");
             return null;
         }
 
-        currentResource = currentComponentSet.eResource();
+        currentResource = currentApplication.eResource();
         return currentResource;
     }
 
@@ -335,8 +339,8 @@ public class LuaModelFacade implements CodeModelFacade {
         return dirLayout;
     }
 
-    public ComponentSet getCurrentComponentSet() {
-        return currentComponentSet;
+    public Application getCurrentComponentSet() {
+        return currentApplication;
     }
 
     @Override

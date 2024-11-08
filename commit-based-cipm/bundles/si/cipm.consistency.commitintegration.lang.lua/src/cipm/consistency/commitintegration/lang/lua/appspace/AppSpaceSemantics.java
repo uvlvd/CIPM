@@ -3,7 +3,7 @@ package cipm.consistency.commitintegration.lang.lua.appspace;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
 import org.xtext.lua.LuaUtil;
-import org.xtext.lua.lua.Chunk;
+import lua.Chunk;
 import org.xtext.lua.lua.Expression_Functioncall_Direct;
 import org.xtext.lua.lua.Expression_String;
 import org.xtext.lua.lua.Expression_VariableName;

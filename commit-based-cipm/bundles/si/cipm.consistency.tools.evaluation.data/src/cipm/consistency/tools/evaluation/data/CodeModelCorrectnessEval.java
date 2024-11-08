@@ -29,5 +29,14 @@ public class CodeModelCorrectnessEval {
     public void setDissimilarFiles(int dissimilarFiles) {
         this.dissimilarFiles = dissimilarFiles;
     }
+    
+    /**
+     * Resets all data to 0.
+     */
+    public void reset() {
+    	setDissimilarFiles(0);
+		setSimilarFiles(0);
+		setIdenticalFiles(0);
+    }
 
 }

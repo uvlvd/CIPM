@@ -1,12 +1,63 @@
 package cipm.consistency.commitintegration.lang.lua.changeresolution.lua;
 
+import java.util.List;
+
+import org.apache.log4j.Logger;
 import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.compare.utils.EqualityHelper;
 import org.eclipse.emf.ecore.EObject;
 import org.xtext.lua.lua.Block;
-import org.xtext.lua.lua.Chunk;
-import org.xtext.lua.lua.Component;
-import org.xtext.lua.lua.ComponentSet;
+
+import lua.Args;
+import lua.Assignment;
+import lua.Chunk;
+import lua.ElseIf;
+import lua.ExpAdd;
+import lua.ExpAnd;
+import lua.ExpConcat;
+import lua.ExpDiv;
+import lua.ExpEq;
+import lua.ExpExponentiation;
+import lua.ExpFalse;
+import lua.ExpGeq;
+import lua.ExpGt;
+import lua.ExpInvert;
+import lua.ExpLength;
+import lua.ExpLeq;
+import lua.ExpLt;
+import lua.ExpMod;
+import lua.ExpMult;
+import lua.ExpNegate;
+import lua.ExpNeq;
+import lua.ExpNil;
+import lua.ExpNumberLiteral;
+import lua.ExpOr;
+import lua.ExpStringLiteral;
+import lua.ExpSub;
+import lua.ExpTrue;
+import lua.ExpVarArgs;
+import lua.Feature;
+import lua.FuncBody;
+import lua.FunctionCall;
+import lua.GenericFor;
+import lua.IfThenElse;
+import lua.LiteralStringArg;
+import lua.MemberAccess;
+import lua.MethodCall;
+import lua.NumericFor;
+import lua.ParList;
+import lua.ParamArgs;
+import lua.Referenceable;
+import lua.Return;
+import lua.TableAccess;
+import lua.TableConstructor;
+import lua.Var;
+import lua.WhileLoop;
+
+import org.xtext.lua.component_extension.Component;
+import org.xtext.lua.component_extension.NamedChunk;
+import org.xtext.lua.component_extension.Application;
+/*
 import org.xtext.lua.lua.Expression_And;
 import org.xtext.lua.lua.Expression_Concatenation;
 import org.xtext.lua.lua.Expression_Division;
@@ -51,10 +102,21 @@ import org.xtext.lua.lua.Statement_For;
 import org.xtext.lua.lua.Statement_If_Then_Else;
 import org.xtext.lua.lua.Statement_If_Then_Else_ElseIfPart;
 import org.xtext.lua.lua.Statement_While;
-
+*/
 import com.google.common.cache.LoadingCache;
 
+/**
+ * This class defines how the constructs of the Lua code model should be matched (which code model objects are "equal")
+ * for the comparison of multiple Lua code models comparison via emfcompare. </br></br>
+ * 
+ * The {@link #LuaHierarchicalMatchEngineFactory} implements hierarchical matching, i.e. the
+ * left and right EObjects matched by this EqualityHelper class are assumed to always be on the same level
+ * in the "trees" of the compared models.
+ * @author juanj
+ *
+ */
 public class LuaEqualityHelper extends EqualityHelper {
+	private static final Logger LOGGER = Logger.getLogger(LuaEqualityHelper.class); 
 
     /**
      * Constructor to initialize the required cache.
@@ -65,45 +127,363 @@ public class LuaEqualityHelper extends EqualityHelper {
     public LuaEqualityHelper(LoadingCache<EObject, org.eclipse.emf.common.util.URI> uriCache) {
         super(uriCache);
     }
-
-    protected boolean matchEList(EList<? extends EObject> left, EList<? extends EObject> right) {
+    
+    @Override
+    protected boolean matchingEObjects(EObject left, EObject right) {
+    	// TODO: may be better to extract null-check here, instead of performing it in every match(..) function
+        return match(left, right);
+    }
+    
+    /**
+     * Do objects match based on lua attributes, like name
+     * 
+     * @param left
+     * @param right
+     * @return True if matching, false if not
+     */
+    public boolean match(EObject left, EObject right) {
         if (left == null || right == null) {
             return false;
         }
-        if (left.size() != right.size()) {
+
+        if (!eClassMatch(left, right)) {
             return false;
         }
-        for (var i = 0; i < left.size(); i++) {
-            if (!match(left.get(i), right.get(i))) {
-                return false;
-            }
+        
+        // this "switch" is ugly, but i have no time to make it nice :/
+        // terminals
+        if (bothInstanceOfAny(left, right, List.of(ExpNil.class, ExpTrue.class, ExpFalse.class, ExpVarArgs.class))) {
+        	 return true;
+        } 
+        
+        // unary expressions
+        else if (left instanceof ExpLength l && right instanceof ExpLength r) {
+            return match(l.getExp(), r.getExp());
+        } else if (left instanceof ExpInvert l && right instanceof ExpInvert r) {
+            return match(l.getExp(), r.getExp());
+        } else if (left instanceof ExpNegate l && right instanceof ExpNegate r) {
+            return match(l.getExp(), r.getExp());
+        } else if (left instanceof ExpNumberLiteral l && right instanceof ExpNumberLiteral r) {
+            return l.getValue() == r.getValue();
+        } else if (left instanceof ExpStringLiteral l && right instanceof ExpStringLiteral r) {
+            return l.getValue().equals(r.getValue());
+        // binary expressions
+        } else if (left instanceof ExpOr l && right instanceof ExpOr r) {
+            return match(l.getLeft(), r.getLeft()) && match(l.getRight(), r.getRight());
+        } else if (left instanceof ExpAnd l && right instanceof ExpAnd r) {
+            return match(l.getLeft(), r.getLeft()) && match(l.getRight(), r.getRight());
+        } else if (left instanceof ExpGt l && right instanceof ExpGt r) {
+            return match(l.getLeft(), r.getLeft()) && match(l.getRight(), r.getRight());
+        } else if (left instanceof ExpGeq l && right instanceof ExpGeq r) {
+            return match(l.getLeft(), r.getLeft()) && match(l.getRight(), r.getRight());
+        } else if (left instanceof ExpLt l && right instanceof ExpLt r) {
+            return match(l.getLeft(), r.getLeft()) && match(l.getRight(), r.getRight());
+        } else if (left instanceof ExpLeq l && right instanceof ExpLeq r) {
+            return match(l.getLeft(), r.getLeft()) && match(l.getRight(), r.getRight());
+        } else if (left instanceof ExpEq l && right instanceof ExpEq r) {
+            return match(l.getLeft(), r.getLeft()) && match(l.getRight(), r.getRight());
+        } else if (left instanceof ExpNeq l && right instanceof ExpNeq r) {
+            return match(l.getLeft(), r.getLeft()) && match(l.getRight(), r.getRight());
+        } else if (left instanceof ExpConcat l && right instanceof ExpConcat r) {
+            return match(l.getLeft(), r.getLeft()) && match(l.getRight(), r.getRight());
+        } else if (left instanceof ExpAdd l && right instanceof ExpAdd r) {
+            return match(l.getLeft(), r.getLeft()) && match(l.getRight(), r.getRight());
+        } else if (left instanceof ExpSub l && right instanceof ExpSub r) {
+            return match(l.getLeft(), r.getLeft()) && match(l.getRight(), r.getRight());
+        } else if (left instanceof ExpMult l && right instanceof ExpMult r) {
+            return match(l.getLeft(), r.getLeft()) && match(l.getRight(), r.getRight());
+        } else if (left instanceof ExpDiv l && right instanceof ExpDiv r) {
+            return match(l.getLeft(), r.getLeft()) && match(l.getRight(), r.getRight());
+        } else if (left instanceof ExpExponentiation l && right instanceof ExpExponentiation r) {
+            return match(l.getLeft(), r.getLeft()) && match(l.getRight(), r.getRight());
+        } else if (left instanceof ExpMod l && right instanceof ExpMod r) {
+            return match(l.getLeft(), r.getLeft()) && match(l.getRight(), r.getRight());
         }
+        
+        // other expressions
+        else if (left instanceof TableConstructor l && right instanceof TableConstructor r) {
+        	return match(l, r);
+        } else if (left instanceof Feature l && right instanceof Feature r) {
+        	return match(l, r);
+        } 
+        
+        // remaining statments etc.
+        else if (left instanceof Assignment l && right instanceof Assignment r) {
+            return match(l, r);
+        } else if (left instanceof IfThenElse l && right instanceof IfThenElse r) {
+            return match(l, r);
+        } else if (left instanceof ElseIf l && right instanceof ElseIf r) {
+            return match(l, r);
+        } else if (left instanceof WhileLoop l && right instanceof WhileLoop r) {
+        	return match(l, r);
+        } else if (left instanceof NumericFor l && right instanceof NumericFor r) {
+        	return match(l, r);
+        } else if (left instanceof GenericFor l && right instanceof GenericFor r) {
+        	return match(l, r);
+        }
+        // TODO: I think this is not needed with the 'new' Lua CM, since the IndexExp
+        //else if (left instanceof Field_AppendEntryToTable l && right instanceof Field_AppendEntryToTable r) {
+        //    return match(l, r);
+        //}
+        else if (left instanceof FuncBody l && right instanceof FuncBody r) {
+            return match(l, r);
+        } else if (left instanceof Return l && right instanceof Return r) {
+            return match(l, r);
+        }
+        // we handle Referenceables late s.t. the subclasses that need to be handled explicitly are already handled (e.g. NamedFeatures).
+        else if (left instanceof Referenceable l && right instanceof Referenceable r) {
+            return matchReferenceablesByName(l, r);
+        }
+        
+        // meta model stuff
+        // we say these match because of the hierarchical matching taking place
+        else if (bothInstanceOfAny(left, right, List.of(Block.class, Chunk.class, Application.class))) {
+        	return true;
+        }
+        // these have names:
+        else if (left instanceof NamedChunk l && right instanceof NamedChunk r) {
+            return l.getName().equals(r.getName());
+        } else if (left instanceof Component l && right instanceof Component r) {
+            return l.getName().equals(r.getName());
+        }
+        
+        // old
+        /*
+        else if (left instanceof Functioncall_Arguments l && right instanceof Functioncall_Arguments r) {
+            return matchEList(l.getArguments(), r.getArguments());
+        } else if (left instanceof Function l && right instanceof Function r) {
+            return matchEList(l.getArguments(), r.getArguments());
+        } else if (left instanceof LastStatement_Return_WithValue l && right instanceof LastStatement_Return_WithValue r) {
+            return matchEList(l.getReturnValues(), r.getReturnValues());
+        } 
+        else if (left instanceof Refble l && right instanceof Refble r) {
+            return match(l, r);
+            
+        // meta model stuff
+        // we say these match because of the hierarchical matching taking place
+        } else if (left instanceof Block l && right instanceof Block r) {
+            return true;
+        } else if (left instanceof Chunk l && right instanceof Chunk r) {
+            return true;
+        } else if (left instanceof ComponentSet l && right instanceof ComponentSet r) {
+            return true;
+        } else if (left instanceof LastStatement_Return l && right instanceof LastStatement_Return r) {
+            return true;
+          
+        // these have names:
+        } else if (left instanceof NamedChunk l && right instanceof NamedChunk r) {
+            return l.getName().equals(r.getName());
+        } else if (left instanceof Component l && right instanceof Component r) {
+            return l.getName().equals(r.getName());
+        }
+
+        // no decision from the custom matchers -> use fallback
+        // TODO reenable
+//        return editionDistanceEqualityChecker.match(left, right);
+ 
+         */
+        return false;
+    }
+
+    protected boolean match(TableConstructor left, TableConstructor right) {
+    	if (left.getFieldList() == null || right.getFieldList() == null) {
+    		return false;
+    	}
+        return matchEList(left.getFieldList().getFields(), right.getFieldList().getFields());
+    }
+    
+    protected boolean match(Feature left, Feature right) {
+    	if (left == null || right == null) {
+    		return false;
+    	}
+    	//TODO: do we need to match "require" function as a special case?
+
+    	
+    	// hierarchical nature of the MatchEngine processes the 
+    	// previous/following features in a feature path, i.e. we don't need to compare the
+    	// path prefixes here.
+    	
+    	// TODO: use lukas' scoping stuff for named things?
+    	
+    	if (left instanceof Var l && right instanceof Var r) {
+    		return match(l, r);
+    	} else if (left instanceof FunctionCall l && right instanceof FunctionCall r) {
+    		return match(l, r);
+    	} else if (left instanceof MethodCall l && right instanceof MethodCall r) {
+    		return match(l, r);
+    	} else if (left instanceof TableAccess l && right instanceof TableAccess r) {
+    		return match(l, r);
+    	} else if (left instanceof MemberAccess l && right instanceof MemberAccess r) {
+    		return match(l, r);
+    	}
+    	// fallback, should not be reached since all possible options should be exhausted at this point
+    	// (i.e. classes are equal and all "Args-types" have a conditional)
+    	logMatchingReachedFalltrhoughForMessage(Args.class);
+    	//TODO: should we use editing distance here as fallback?
+    	return false;
+    }
+    
+    protected boolean match(Var left, Var right) {
+    	return refblesMatchByScope(left, right);
+    }
+    
+    protected boolean match(FunctionCall left, FunctionCall right) {
+    	return left != null && right != null // TODO: test if null-check is needed
+    			&& match(left.getArgs(), right.getArgs());
+    }
+    
+    protected boolean match(MethodCall left, MethodCall right) {
+    	return refblesMatchByScope(left, right)
+    			&& match(left.getArgs(), right.getArgs());
+    }
+    
+    protected boolean match(TableAccess left, TableAccess right) {
+    	return match(left.getIndexExp(), right.getIndexExp())
+    			&& refblesMatchByScope(left, right);
+    }
+    
+    protected boolean match(MemberAccess left, MemberAccess right) {
+    	return refblesMatchByScope(left, right);
+    }
+
+
+    protected boolean match(Assignment left, Assignment right) {
+    	var lExpList = left.getExpList();
+    	var rExpList = right.getExpList();
+    	if (lExpList == null || rExpList == null) {
+    		return false;
+    	}
+    	
+    	var lExps = lExpList.getExps();
+    	var rExps = rExpList.getExps();
+
+    	return matchEList(lExps, rExps);
+    }
+    
+    protected boolean match(IfThenElse left, IfThenElse right) {
+        if (!match(left.getCondition(), right.getCondition())) {
+            return false;
+        }
+        if (!matchEList(left.getElseIfs(), right.getElseIfs())) {
+            return false;
+        }
+        if ((left.getElseBlock() != null && right.getElseBlock() == null)
+                || (left.getElseBlock() == null && right.getElseBlock() != null)) {
+            return false;
+        }
+        // TODO remove if this does not help:
+        // seems to help but not perfectly
+        // TODO: comment by juanj: why not match the stats? seems to have been tried before with !match(left.getBlock(), right.getBlock())...
+        if (!matchEListByClass(left.getThenBlock().getStats(), right.getThenBlock().getStats())) {
+            return false;
+        }
+//        if (!match(left.getBlock(), right.getBlock())) {
+//            return false;
+//        }
         return true;
     }
 
-    protected boolean matchEListByClass(EList<? extends EObject> left, EList<? extends EObject> right) {
+    protected boolean match(ElseIf left, ElseIf right) {
+        // TODO is this enough?
+    	// TODO: comment by juanj: it should be, assuming that only ElseIfs contained in the same IfThenElse are
+    	// compared (hierarchical matching) and that an ElseIf with the same condition as another in the same IfThenElse
+    	// seems illogical.
+        return match(left.getCondition(), right.getCondition());
+    }
+    
+    protected boolean match(WhileLoop left, WhileLoop right) {
+        return match(left.getCondition(), right.getCondition());
+    }
+
+    protected boolean match(NumericFor left, NumericFor right) {
+    	return left.getArg().equals(right.getArg())
+    			&& match(left.getFromExp(), right.getFromExp())
+    			&& match(left.getToExp(), right.getToExp())
+    			&& match(left.getStepExp(), right.getStepExp());
+    }
+    
+    protected boolean match(GenericFor left, GenericFor right) {
+        return matchEList(left.getArgList().getArgs(), right.getArgList().getArgs())
+        		&& matchEList(left.getExpList().getExps(), right.getExpList().getExps());
+    }
+    
+    protected boolean match(FuncBody left, FuncBody right) {
+        return match(left.getParList(), right.getParList());
+    }
+    
+    protected boolean match(ParList left, ParList right) {
+        return (left instanceof ExpVarArgs && right instanceof ExpVarArgs)
+        		|| matchEList(left.getArgsList().getArgs(), right.getArgsList().getArgs());
+    }
+    
+    protected boolean match(Return left, Return right) {
+        return (left.getExpList() == null && right.getExpList() == null) // both are return statements without expressions
+        		|| matchEList(left.getExpList().getExps(), right.getExpList().getExps());
+    }
+    
+    protected boolean match(Args left, Args right) {
+    	if (left == null || right == null) {
+    		return false;
+    	}
+    	
+    	if (!eClassMatch(left, right)) {
+    		return false;
+    	}
+    	
+    	if (left instanceof ParamArgs l && right instanceof ParamArgs r) {
+    		var lArgs = l.getParams().getExps();
+    		var rArgs = r.getParams().getExps();
+    		return matchEList(lArgs, rArgs);
+    	} else if (bothInstanceOf(left, right, TableConstructor.class)) {
+    		match(left, right);
+    	} else if (left instanceof LiteralStringArg l && right instanceof LiteralStringArg r) {
+    		return l.getStr().equals(r.getStr());
+    	}
+    	
+    	// fallback, should not be reached since all possible options should be exhausted at this point
+    	// (i.e. classes are equal and all "Args-types" have a conditional)
+    	logMatchingReachedFalltrhoughForMessage(Args.class);
+    	//TODO: should we use editing distance here as fallback?
+    	return false;
+    }
+    
+    protected boolean refblesMatchByScope(Referenceable left, Referenceable right) {
         if (left == null || right == null) {
             return false;
         }
-        if (left.size() != right.size()) {
+
+        if (!left.getName().equals(right.getName())) {
             return false;
         }
-        for (var i = 0; i < left.size(); i++) {
-            if (!eClassMatch(left.get(i), right.get(i))) {
+
+        var lParent = left.eContainer();
+        var rParent = right.eContainer();
+        while (lParent != null && rParent != null) {
+            if (!eClassMatch(lParent, rParent)) {
                 return false;
             }
+            if (lParent instanceof Assignment && rParent instanceof Assignment) {
+                var lExpList = ((Assignment) lParent).getExpList();
+                var rExpList = ((Assignment) rParent).getExpList();
+                if (lExpList != null && rExpList != null) {
+                	var lExps = lExpList.getExps();
+                	var rExps = rExpList.getExps();
+                	if (lExps != null && rExps != null) {
+                		if (lExps.size() != rExps.size()) {
+                			return false;
+                		}
+                	}
+                }
+            }
+            lParent = lParent.eContainer();
+            rParent = rParent.eContainer();
         }
-        return true;
-    }
 
-    protected static boolean eClassMatch(EObject left, EObject right) {
-        var leftClass = left.eClass()
-            .getName();
-        var rightClass = right.eClass()
-            .getName();
-        return leftClass.equals(rightClass);
+        // if both are now null both scopes have the same depth
+        return lParent == null && rParent == null;
     }
-
+    
+/*
     protected static boolean match(Refble left, Refble right) {
         // both null
 //        if (left == null && right == null) {
@@ -117,7 +497,9 @@ public class LuaEqualityHelper extends EqualityHelper {
         return left.getName()
             .equals(right.getName());
     }
-
+*/
+    
+    // this was already commented-out in the previous version
 //    protected boolean refblesMatchPositionally(Refble left, Refble right) {
 //        if (left == null || right == null) {
 //            return false;
@@ -138,7 +520,42 @@ public class LuaEqualityHelper extends EqualityHelper {
 //            .indexOf(rightStatement);
 //        return leftIndex == rightIndex;
 //    }
+/*
+    protected boolean refblesMatchByScope(Refble left, Refble right) {
+        if (left == null || right == null) {
+            return false;
+        }
 
+        if (!left.getName()
+            .equals(right.getName())) {
+            return false;
+        }
+
+        var lParent = left.eContainer();
+        var rParent = right.eContainer();
+        while (lParent != null && rParent != null) {
+            if (!eClassMatch(lParent, rParent)) {
+                return false;
+            }
+            if (lParent instanceof Statement_Assignment && rParent instanceof Statement_Assignment) {
+                var lAss = (Statement_Assignment) lParent;
+                var rAss = (Statement_Assignment) rParent;
+                if (lAss.getDests()
+                    .size() != rAss.getDests()
+                        .size()) {
+                    return false;
+                }
+            }
+            lParent = lParent.eContainer();
+            rParent = rParent.eContainer();
+        }
+
+        // if both are now null both scopes have the same depth
+        return lParent == null && rParent == null;
+        
+    }*/
+    
+    /*
     protected boolean refblesMatchByScope(Refble left, Refble right) {
         if (left == null || right == null) {
             return false;
@@ -171,7 +588,8 @@ public class LuaEqualityHelper extends EqualityHelper {
         // if both are now null both scopes have the same depth
         return lParent == null && rParent == null;
     }
-
+    */
+/*
     protected boolean match(Expression_VariableName left, Expression_VariableName right) {
         // both null
 //        if (left == null && right == null) {
@@ -207,9 +625,6 @@ public class LuaEqualityHelper extends EqualityHelper {
                     .getArguments());
     }
 
-    protected boolean match(Expression_TableConstructor left, Expression_TableConstructor right) {
-        return matchEList(left.getFields(), right.getFields());
-    }
 
     protected boolean match(Field_AppendEntryToTable left, Field_AppendEntryToTable right) {
         return match(left.getValue(), right.getValue());
@@ -307,6 +722,62 @@ public class LuaEqualityHelper extends EqualityHelper {
 
         return true;
     }
+    */
+   
+
+    protected boolean matchEList(EList<? extends EObject> left, EList<? extends EObject> right) {
+        if (left == null || right == null) {
+            return false;
+        }
+        if (left.size() != right.size()) {
+            return false;
+        }
+        for (var i = 0; i < left.size(); i++) {
+            if (!match(left.get(i), right.get(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    protected boolean matchEListByClass(EList<? extends EObject> left, EList<? extends EObject> right) {
+        if (left == null || right == null) {
+            return false;
+        }
+        if (left.size() != right.size()) {
+            return false;
+        }
+        for (var i = 0; i < left.size(); i++) {
+            if (!eClassMatch(left.get(i), right.get(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    protected static boolean eClassMatch(EObject left, EObject right) {
+        var leftClass = left.eClass()
+            .getName();
+        var rightClass = right.eClass()
+            .getName();
+        return leftClass.equals(rightClass);
+    }
+    
+    protected void logMatchingReachedFalltrhoughForMessage(Class<?> clazz) {
+    	LOGGER.error("Matching of " + clazz + " reached fall-through, although all possible cases should have been exhausted.");
+    }
+    
+    protected boolean matchReferenceablesByName(Referenceable left, Referenceable right) {
+    	return left.getName().equals(right.getName());
+    }
+    
+    protected boolean bothInstanceOfAny(final Object left, final Object right, final List<Class<?>> clazzs) {
+    	return clazzs.stream().anyMatch(clazz -> bothInstanceOf(left, right, clazz));
+    }
+    
+    protected boolean bothInstanceOf(final Object left, final Object right, final Class<?> clazz) {
+    	return clazz.isInstance(left) && clazz.isInstance(right);
+    }
     
     /**
      * Do objects match based on lua attributes, like name
@@ -315,6 +786,7 @@ public class LuaEqualityHelper extends EqualityHelper {
      * @param right
      * @return True if matching, false if not
      */
+    /*
     public boolean match(EObject left, EObject right) {
         if (left == null || right == null) {
             return false;
@@ -439,9 +911,11 @@ public class LuaEqualityHelper extends EqualityHelper {
 //        return editionDistanceEqualityChecker.match(left, right);
         return false;
     }
-
+*/
+    /*
     @Override
     protected boolean matchingEObjects(EObject left, EObject right) {
         return match(left, right);
-    }
+    }*/
+    
 }

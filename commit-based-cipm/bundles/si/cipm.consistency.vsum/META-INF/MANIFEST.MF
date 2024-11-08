@@ -20,5 +20,6 @@ Require-Bundle:
  org.splevo.jamopp.extraction;bundle-version="1.0.0",
  org.splevo.extraction;bundle-version="1.0.0",
  org.splevo.commons;bundle-version="1.0.0",
- org.xtext.lua;bundle-version="1.0.0"
+ org.xtext.lua;bundle-version="1.0.0",
+ org.xtext.lua.component_extension;bundle-version="0.1.0"
 Export-Package: cipm.consistency.vsum

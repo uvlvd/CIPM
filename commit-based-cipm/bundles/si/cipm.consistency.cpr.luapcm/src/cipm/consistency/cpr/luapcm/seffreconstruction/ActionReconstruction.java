@@ -27,6 +27,11 @@ import org.xtext.lua.scoping.LuaLinkingService;
 
 import cipm.consistency.cpr.luapcm.Config;
 import cipm.consistency.cpr.luapcm.Config.ReconstructionType;
+import lua.GenericFor;
+import lua.IfThenElse;
+import lua.NumericFor;
+import lua.RepeatLoop;
+import lua.WhileLoop;
 import tools.vitruv.change.correspondence.view.EditableCorrespondenceModelView;
 import tools.vitruv.dsls.reactions.runtime.correspondence.ReactionsCorrespondence;
 
@@ -81,8 +86,13 @@ public final class ActionReconstruction {
     }
 
     private static boolean isControlFlowStatement(EObject eObj) {
-        return (eObj instanceof Statement_If_Then_Else || eObj instanceof Statement_For
-                || eObj instanceof Statement_While || eObj instanceof Statement_Repeat);
+        //return (eObj instanceof Statement_If_Then_Else || eObj instanceof Statement_For
+        //        || eObj instanceof Statement_While || eObj instanceof Statement_Repeat);
+        return eObj instanceof IfThenElse 
+        		|| eObj instanceof NumericFor 
+        		|| eObj instanceof GenericFor
+        		|| eObj instanceof WhileLoop 
+        		|| eObj instanceof RepeatLoop;
     }
 
     private AbstractAction reconstructBranchAction(Statement_If_Then_Else ifStatement) {

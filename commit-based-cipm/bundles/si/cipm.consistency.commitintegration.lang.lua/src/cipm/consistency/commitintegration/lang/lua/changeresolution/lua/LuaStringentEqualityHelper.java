@@ -2,10 +2,10 @@ package cipm.consistency.commitintegration.lang.lua.changeresolution.lua;
 
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EObject;
-import org.xtext.lua.lua.Refble;
-import org.xtext.lua.lua.Statement_Assignment;
 
 import com.google.common.cache.LoadingCache;
+
+import lua.Assignment;
 
 /**
  * A more stringent equality helper for the evaluation
@@ -22,14 +22,8 @@ public class LuaStringentEqualityHelper extends LuaEqualityHelper {
     }
 
     @Override
-    protected boolean match(Statement_Assignment left, Statement_Assignment right) {
-        if (!matchEList(left.getDests(), right.getDests())) {
-            return false;
-        }
-        if (!matchEList(left.getValues(), right.getValues())) {
-            return false;
-        }
-        
-        return true;
+    protected boolean match(Assignment left, Assignment right) {
+    	return super.match(left, right)
+    			&& matchEList(left.getVars(), right.getVars());
     }
 }
