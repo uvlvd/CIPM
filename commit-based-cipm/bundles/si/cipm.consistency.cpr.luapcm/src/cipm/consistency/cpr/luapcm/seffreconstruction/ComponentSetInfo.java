@@ -1,31 +1,24 @@
 package cipm.consistency.cpr.luapcm.seffreconstruction;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
 import org.palladiosimulator.pcm.seff.AbstractAction;
-import org.xtext.lua.lua.Block;
-import org.xtext.lua.lua.Component;
-import org.xtext.lua.component_extension.Application;
-import org.xtext.lua.lua.Expression_Functioncall_Direct;
-import org.xtext.lua.lua.Expression_String;
-import org.xtext.lua.lua.Expression_VariableName;
-import org.xtext.lua.lua.Refble;
-import org.xtext.lua.lua.Statement;
-import org.xtext.lua.lua.Statement_Function_Declaration;
-import org.xtext.lua.lua.Statement_If_Then_Else;
+import org.xtext.lua.component_extension.Component;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 
 import cipm.consistency.commitintegration.lang.lua.appspace.AppSpaceSemantics;
+import lua.Block;
+import lua.FuncBody;
+import lua.IfThenElse;
 
 /**
  * This class contains information about a ComponentSet and its contents which is needed during SEFF
@@ -37,6 +30,8 @@ public class ComponentSetInfo {
 
     private static final Logger LOGGER = Logger.getLogger(ComponentSetInfo.class.getName());
 
+    //TODO: juanj comment: this seems to map some kind of function name encoded in the last argument
+    // of the functionCall to that function call (?)
     private Map<String, Expression_Functioncall_Direct> functionNameToServeCall;
 
     // we track which Statement_Function_Declaration are called in an external call action
@@ -137,48 +132,74 @@ public class ComponentSetInfo {
     }
 
     /**
-     * Determine if we need to reconstruct actions for a given eObject. This is only the case for
-     * contenst of a function declaration which needs a seff, In addition only external calls and
-     * objects above them in the tree need action recovery.s
+     * Determine if we need to reconstruct actions for a given eObject. This is only the case for The
+     * content of a function declaration which needs a SEFF. In addition only external calls and
+     * objects above them in the tree need action recovery.
      * 
      * @param eObj
      * @return
      */
-    public boolean needsActionReconstruction(EObject eObj) {
-        var parentDeclaration = EcoreUtil2.getContainerOfType(eObj, Statement_Function_Declaration.class);
-        if (parentDeclaration == null || !needsSeffReconstruction(parentDeclaration)) {
-            return false;
-        }
+    public boolean needsActionReconstruction(final EObject eObj) {
+    	// handle if-then-else blocks
+    	if (eObj instanceof IfThenElse ifThenElse) {
+    		return LuaUtil.getBlocksFromIfStatement(ifThenElse)
+    				.stream()
+    				.anyMatch(blocksRequiringActionReconstruction::contains);
+    	}
+    	
+    	// handle contents of function body
+    	final var funcBodyOpt = findContainingFuncBody(eObj);
+    	if (funcBodyOpt.isPresent()) {
+    		final var funcBody = funcBodyOpt.get();
+    		final var funcBlock = funcBody.getFuncBlock();
+    		
+    		 if (blocksRequiringActionReconstruction.contains(funcBlock)) {
+    			 return true;
+    	     }
+    	}
+    	return false;
+    	
+    	
+    	
+//        var parentDeclaration = EcoreUtil2.getContainerOfType(eObj, Statement_Function_Declaration.class);
+//        if (parentDeclaration == null || !needsSeffReconstruction(parentDeclaration)) {
+//            return false;
+//        }
 
-        var parentBlock = EcoreUtil2.getContainerOfType(eObj, Block.class);
-        if (blocksRequiringActionReconstruction.contains(parentBlock)) {
-            return true;
-        }
-
-        if (eObj instanceof Statement_If_Then_Else ifStatement) {
-            for (var block : getBlocksFromIfStatement(ifStatement)) {
-                if (blocksRequiringActionReconstruction.contains(block)) {
-                    return true;
-                }
-            }
-        }
-        return false;
+//        var parentBlock = EcoreUtil2.getContainerOfType(eObj, Block.class);
+//        if (blocksRequiringActionReconstruction.contains(parentBlock)) {
+//            return true;
+//        }
+//
+//        if (eObj instanceof Statement_If_Then_Else ifStatement) {
+//            for (var block : getBlocksFromIfStatement(ifStatement)) {
+//                if (blocksRequiringActionReconstruction.contains(block)) {
+//                    return true;
+//                }
+//            }
+//        }
+//        return false;
+    }
+    
+    private Optional<FuncBody> findContainingFuncBody(final EObject eObj) {
+    	final var funcBody = EcoreUtil2.getContainerOfType(eObj, FuncBody.class);
+    	return Optional.of(funcBody);
     }
 
     // TODO move this to a utility class
-    public static List<Block> getBlocksFromIfStatement(Statement_If_Then_Else ifStatement) {
-        List<Block> blocks = new ArrayList<>();
-        if (ifStatement.getBlock() != null) {
-            blocks.add(ifStatement.getBlock());
-        }
-        for (var elseIf : ifStatement.getElseIf()) {
-            blocks.add(elseIf.getBlock());
-        }
-        if (ifStatement.getElseBlock() != null) {
-            blocks.add(ifStatement.getElseBlock());
-        }
-        return blocks;
-    }
+//    public static List<Block> getBlocksFromIfStatement(Statement_If_Then_Else ifStatement) {
+//        List<Block> blocks = new ArrayList<>();
+//        if (ifStatement.getBlock() != null) {
+//            blocks.add(ifStatement.getBlock());
+//        }
+//        for (var elseIf : ifStatement.getElseIf()) {
+//            blocks.add(elseIf.getBlock());
+//        }
+//        if (ifStatement.getElseBlock() != null) {
+//            blocks.add(ifStatement.getElseBlock());
+//        }
+//        return blocks;
+//    }
 
     private void scanFunctionsForActionReconstruction(ComponentSet componentSet) {
         var functionDecls = EcoreUtil2.getAllContentsOfType(componentSet, Statement_Function_Declaration.class);

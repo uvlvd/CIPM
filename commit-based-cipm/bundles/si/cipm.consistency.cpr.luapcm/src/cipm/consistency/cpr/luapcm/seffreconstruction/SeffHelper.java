@@ -1,12 +1,13 @@
 package cipm.consistency.cpr.luapcm.seffreconstruction;
 
 import org.apache.log4j.Logger;
-import org.xtext.lua.lua.Refble;
+
+import lua.Referenceable;
 
 public class SeffHelper {
     private static final Logger LOGGER = Logger.getLogger(SeffHelper.class.getName());
 
-    public static boolean needsSeffReconstruction(Refble declaration) {
+    public static boolean needsSeffReconstruction(Referenceable declaration) {
         if (declaration == null) {
             return false;
         }
