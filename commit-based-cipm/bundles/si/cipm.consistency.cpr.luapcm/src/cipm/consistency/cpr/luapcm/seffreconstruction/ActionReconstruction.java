@@ -152,7 +152,7 @@ public final class ActionReconstruction {
         // all function calls in this statement (or the statement may be a call itself)
         final var functionCalls = LuaUtil.getFunctionCallsFromStat(statement)
         		.stream() // we can only reconstruct for non-mocked function calls
-        		.filter(LuaFunctionCall::isMocked)
+        		.filter(fc -> !fc.isMocked())
         		.toList();
 
         AbstractAction predecessor = null;
@@ -196,11 +196,9 @@ public final class ActionReconstruction {
     private AbstractAction reconstructFunctionCallToAction(final LuaFunctionCall functionCall) {
 
     	final var calledFunction = functionCall.getCalledFunction();
-    	final var callingComponent = LuaUtil.getComponent(functionCall.getCallingFeature());
-    	final var calledComponent = LuaUtil.getComponent(calledFunction);
 
         // if we call another of our own seffs we use their step behaviour
-        if (callingComponent.equals(calledComponent)) {
+        if (functionCall.isInternal()) {
             if (SeffHelper.needsSeffReconstruction(calledFunction)) {
             	// TODO: get fully qualified name for logging
                 LOGGER.trace("Call classification: Internal call to SEFF " + calledFunction.getName());
@@ -336,7 +334,7 @@ public final class ActionReconstruction {
         // determine the signature of the called function
         var calledSignature = CorrespondenceUtil.getCorrespondingEObjectByType(
 					        		correspondenceModelView, 
-					        		calledFunction,
+					        		calledFunction.getRoot(),
 					                OperationSignature.class
 				              );
         if (calledSignature != null) {
@@ -376,17 +374,7 @@ public final class ActionReconstruction {
     
     
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+   
     
 /*
     public static Expression_Functioncall_Direct getServeCallForDeclaration(Statement_Function_Declaration eObj) {
@@ -412,25 +400,55 @@ public final class ActionReconstruction {
         return EcoreUtil2.getAllContentsOfType(statement, Expression_Functioncall.class);
     }
 */
-//    private static boolean isCallArchitecturallyRelevant(final LuaFunctionCall call, final ComponentSetInfo info) {
-//    	
-//    	
-//    	final var calledFunction = call.getCalledFunction();
-//    	final var callingComponent = LuaUtil.getComponent(call.getCallingFeature());
-//    	final var calledComponent = LuaUtil.getComponent(calledFunction);
-//    	
-//    	final var isCallToMockedFunction = LuaUtil.isMocked(calledFunction);
-//        final var isInternalCall = calledComponent.equals(callingComponent);
-//        final var isExternalCall = !isInternalCall;
-//        final var calledFunctionHasSeff = info.needsSeffReconstruction(calledFunction);
-//        
-//        return !isCallToMockedFunction
-//                && (
-//                		isExternalCall
-//                        || (Config.getReconstructionTypeInternalSeffCall() == ReconstructionType.InternalCallAction
-//                                && isInternalCall 
-//                                && calledFunctionHasSeff)
-//                   );
+    
+    
+    
+    // TODO: this was not even used in the original code.... oh wait yes it was
+    protected static boolean doesStatementContainArchitecturallyRelevantCall(
+    		final Stat stat,
+            final ComponentSetInfo info
+            ) {
+    	
+    	final var calls = LuaUtil.getFunctionCallsFromStat(stat);
+    	for (var call : calls) {
+            if (isCallArchitecturallyRelevant(call, info)) {
+            	// TODO: should probably print fully qualified name here...
+            	// need to implement/get access to org.xtext.lua.linking.LuaQualifiedNameProvider to do that or
+            	// implement some kind of utility method...
+                LOGGER.debug("Scan found architecturally relevant function call to: " + call.getCalledFunction().getName());
+                return true;
+            }
+        }
+    	return false;
+    	
+//        var calls = getFunctionCallsFromStatement(statement);
+//        for (var call : calls) {
+//            if (isCallArchitecturallyRelevant(call, info)) {
+//                if (call instanceof Expression_Functioncall_Direct directCall) {
+//                    LOGGER
+//                        .debug("Scan found architecturally relevant function call to: " + directCall.getCalledFunction()
+//                            .getName());
+//                }
+//                return true;
+//            }
+//        }
+//        return false;
+        
+    }
+
+    private static boolean isCallArchitecturallyRelevant(final LuaFunctionCall functionCall, final ComponentSetInfo info) {
+    	
+    	
+    	final var calledFunction = functionCall.getCalledFunction();
+        final var calledFunctionHasSeff = info.needsSeffReconstruction(calledFunction);
+        
+        return !functionCall.isMocked()
+                && (
+                		functionCall.isExternal()
+                        || (Config.getReconstructionTypeInternalSeffCall() == ReconstructionType.InternalCallAction
+                                && functionCall.isInternal() 
+                                && calledFunctionHasSeff)
+                   );
         
 //        if (call instanceof Expression_Functioncall_Direct directCall) {
 //            var calledFunction = directCall.getCalledFunction();
@@ -457,47 +475,6 @@ public final class ActionReconstruction {
 //
 //        // currently table calls and others are never architecturally relevant
 //        return false;
-//    }
-
+    }
     
-    
-    
-    // TODO: this was not even used in the original code....
-//    protected static boolean doesStatementContainArchitecturallyRelevantCall(
-//    		final Stat stat,
-//            final ComponentSetInfo info
-//            ) {
-//    	
-//    	final var calls = LuaUtil.getFunctionCallsFromStat(stat);
-//    	for (var call : calls) {
-//            if (isCallArchitecturallyRelevant(call, info)) {
-//            	// TODO: should probably print fully qualified name here...
-//            	// need to implement/get access to org.xtext.lua.linking.LuaQualifiedNameProvider to do that or
-//            	// implement some kind of utility method...
-//                LOGGER.debug("Scan found architecturally relevant function call to: " + call.getCalledFunction().getName());
-//                return true;
-//            }
-//        }
-//    	return false;
-    	
-//        var calls = getFunctionCallsFromStatement(statement);
-//        for (var call : calls) {
-//            if (isCallArchitecturallyRelevant(call, info)) {
-//                if (call instanceof Expression_Functioncall_Direct directCall) {
-//                    LOGGER
-//                        .debug("Scan found architecturally relevant function call to: " + directCall.getCalledFunction()
-//                            .getName());
-//                }
-//                return true;
-//            }
-//        }
-//        return false;
-        
-//    }
-
-
-
-
-
-
 }

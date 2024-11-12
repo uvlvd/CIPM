@@ -1,10 +1,12 @@
 package cipm.consistency.cpr.luapcm.seffreconstruction;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
@@ -15,6 +17,8 @@ import lua.Block;
 import lua.BlockWrapperWithArgs;
 import lua.ElseIf;
 import lua.ExpFunctionDeclaration;
+import lua.FunctionDeclaration;
+import lua.LocalFunctionDeclaration;
 import lua.FuncBody;
 import lua.FunctionCall;
 import lua.FunctionCallStat;
@@ -30,8 +34,20 @@ import lua.Stat;
 import lua.WhileLoop;
 
 public class LuaUtil {
-	private LuaUtil() { }
 	
+	private LuaUtil() { }
+    
+    /**
+     * Returns true if the given Referenceable is mocked. The Lua CM is not able to resolve all
+     * references (e.g. because of the dynamic nature of some references) and will insert 
+     * mocks for these references.
+     */
+    public static boolean isMocked(final Referenceable ref) {
+    	// TODO: ensure that this functions correctly: SyntheticVar is only available via the org.xtext.lua package,
+    	// not via the org.xtext.lua.component_extension, which should be used by the Lua CM parser... (?)
+    	return ref instanceof SyntheticVar;
+    }
+    
 	/**
 	 * Returns a list containing all the Blocks found in the given IfThenElse, in the following order:</br>
 	 * 1. The ThenBlock of the IfThenElse</br>
@@ -104,11 +120,18 @@ public class LuaUtil {
         		|| stat instanceof RepeatLoop;
     }
     
-    /**
-     * Returns an Optional containing the Component containing the given EObject.
-     */
-    public static Optional<Component> getComponent(final EObject eObj) {
-    	return Optional.of(EcoreUtil2.getContainerOfType(eObj, Component.class));
+
+    
+    public static Component getComponent(final LuaFunctionCall functionCall) {
+    	return getComponent(functionCall.getCallingFeature());
+    }
+    
+    public static Component getComponent(final LuaFunctionDeclaration functionDeclaration) {
+    	return getComponent(functionDeclaration.getRoot());
+    }
+    
+    public static Component getComponent(final EObject eObj) {
+    	return EcoreUtil2.getContainerOfType(eObj, Component.class);
     }
     
     /**
@@ -137,42 +160,72 @@ public class LuaUtil {
 					.forEach(result::add);
     	}
     	return result;
-    }
+    } 
     
     /**
-     * Returns true if the given Referenceable is mocked. The Lua CM is not able to resolve all
-     * references (e.g. because of the dynamic nature of some references) and will insert 
-     * mocks for these references.
+     * Returns all non-mocked external function calls contained in the given object.
      */
-    public static boolean isMocked(final Referenceable ref) {
-    	// TODO: ensure that this functions correctly: SyntheticVar is only available via the org.xtext.lua package,
-    	// not via the org.xtext.lua.component_extension, which should be used by the Lua CM parser... (?)
-    	return ref instanceof SyntheticVar;
+    public static List<LuaFunctionCall> getExternalFunctionCallsContainedIn(final EObject root) {
+    	return getFunctionCallsContainedIn(root)
+    			.stream()
+    			.filter(fc -> !fc.isMocked())
+    			.filter(LuaFunctionCall::isExternal)
+    			.toList();
+    }
+    
+    
+    // TODO: create superclass for Lua FunctionCallStat,FunctionCall,MethodCall s.t. they can be handled
+    // together.. either in org.xtext.lua (maybe in lua.xtext?) or in this package as a helper class
+    public static List<LuaFunctionCall> getFunctionCallsContainedIn(final EObject root) {
+    	var result = new ArrayList<LuaFunctionCall>();
+    	EcoreUtil2.getAllContentsOfType(root, FunctionCallStat.class)
+    		.stream()
+    		.map(LuaFunctionCall::from)
+    		.filter(Objects::nonNull)
+    		.forEach(result::add);
+    	EcoreUtil2.getAllContentsOfType(root, FunctionCall.class)
+			.stream()
+			.map(LuaFunctionCall::from)
+			.filter(Objects::nonNull)
+			.forEach(result::add);
+    	EcoreUtil2.getAllContentsOfType(root, MethodCall.class)
+			.stream()
+			.map(LuaFunctionCall::from)
+			.filter(Objects::nonNull)
+			.forEach(result::add);
+    	return result;
+    }
+
+    // TODO: comment copied from getFunctionCallscontainedIn: create superclass for Lua FunctionCallStat,FunctionCall,MethodCall s.t. they can be handled
+    // together.. either in org.xtext.lua (maybe in lua.xtext?) or in this package as a helper class 
+    public static List<LuaFunctionDeclaration> getAllFunctionDeclarationsContainedIn(final EObject root) {
+    	var result = new ArrayList<LuaFunctionDeclaration>();
+    	EcoreUtil2.getAllContentsOfType(root, FunctionDeclaration.class)
+    		.stream()
+    		.map(LuaFunctionDeclaration::from)
+    		.filter(Objects::nonNull)
+    		.forEach(result::add);
+    	EcoreUtil2.getAllContentsOfType(root, LocalFunctionDeclaration.class)
+			.stream()
+			.map(LuaFunctionDeclaration::from)
+			.filter(Objects::nonNull)
+			.forEach(result::add);
+    	EcoreUtil2.getAllContentsOfType(root, ExpFunctionDeclaration.class)
+			.stream()
+			.map(LuaFunctionDeclaration::from)
+			.filter(Objects::nonNull)
+			.forEach(result::add);
+    	return result;
     }
     
     public static Block getBlockFromCalledFunction(LuaFunctionCall functionCall) {
-    	var body = getFuncBodyFromCalledFunction(functionCall);
-    	if (body != null) {
-    		return body.getFuncBlock();
+    	if (functionCall.getCalledFunction() == null) {
+    		return null;
     	}
-    	return null;
+    	return functionCall.getCalledFunction().getBlock();
     }
     
-    private static FuncBody getFuncBodyFromCalledFunction(LuaFunctionCall functionCall) {
-    	if (functionCall.isMocked()) return null;
-    	
-    	final var calledFunction = functionCall.getCalledFunction();
-    	
-    	if (calledFunction instanceof FunctionDeclaration funcDecl) {
-			return funcDecl.getBody();
-		} else if (calledFunction instanceof LocalFunctionDeclaration funcDecl) {
-			return funcDecl.getBody();
-		} else if (calledFunction instanceof ExpFunctionDeclaration funcDecl) {
-			return funcDecl.getBody();
-		}
-    	
-    	throw new RuntimeException("Unexpectedly did not find function body for called funciton " + calledFunction);
-    }
+
     
 
 

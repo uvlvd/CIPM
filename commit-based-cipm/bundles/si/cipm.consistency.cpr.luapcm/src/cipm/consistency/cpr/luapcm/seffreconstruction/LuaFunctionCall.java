@@ -24,7 +24,7 @@ public class LuaFunctionCall {
 	/**
 	 * The called function.
 	 */
-	private Referenceable calledFunction;
+	private LuaFunctionDeclaration calledFunction;
 	/**
 	 * The feature calling the function;
 	 */
@@ -32,9 +32,14 @@ public class LuaFunctionCall {
 	
 	// set on init, contract: calledFunction = null <=> isMocked = true
 	private boolean isMocked = false; 
+	// set on first access
+	private Boolean isExternal = null;
 	
 	private LuaFunctionCall() { }
 	
+	/**
+	 * Returns the name of the <i>called</i> function.
+	 */
 	public String getName() {
 		return name;
 	}
@@ -42,7 +47,7 @@ public class LuaFunctionCall {
 	/**
 	 * Returns the called function, or null if the reference to the called function is mocked.
 	 */
-	public Referenceable getCalledFunction() {
+	public LuaFunctionDeclaration getCalledFunction() {
 		return calledFunction;
 	}
 	
@@ -55,6 +60,31 @@ public class LuaFunctionCall {
 	 */
 	public boolean isMocked() {
 		return isMocked;
+	}
+	
+	/**
+	 * Returns true if this is a function call to an external function, i.e. the component
+	 * containing the function call differs from the component containing the called function.</br>
+	 * 
+	 * This can only be determined if this {@link LuaFunctionCall} is not mocked, and will
+	 * throw a {@link RuntimeException} otherwise.
+	 */
+	public boolean isExternal() {
+		if (isExternal == null) {
+			if (calledFunction == null) {
+				throw new RuntimeException("Attempting to check if " + this + " is external, but calledFunction is null!");
+			}
+			// note: we are comparing optionals here
+			final var callingComponent = LuaUtil.getComponent(this);
+			final var calledComponent = LuaUtil.getComponent(calledFunction);
+			isExternal = !(callingComponent.equals(calledComponent));
+		}
+		
+		return isExternal;
+	}
+	
+	public boolean isInternal() {
+		return !isExternal();
 	}
 
 	public static LuaFunctionCall from(final FunctionCallStat functionCallStat) {
@@ -136,26 +166,26 @@ public class LuaFunctionCall {
 		return true;
 	}
 	
-	private Referenceable getCalledFunction(NamedFeature named) {
+	private LuaFunctionDeclaration getCalledFunction(NamedFeature named) {
 		var ref = named.getRef();
 		return getCalledFunction(ref, 0, 1000);
 	}
 	
-	private Referenceable getCalledFunction(Referenceable ref, int currDepth, final int maxDepth) {
+	private LuaFunctionDeclaration getCalledFunction(Referenceable ref, int currDepth, final int maxDepth) {
 		if (currDepth > maxDepth) {
 			throw new RuntimeException("Reached max depth while attempting to get called function value from " + ref);
 		}
 		
 		if (ref instanceof FunctionDeclaration decl) {
-			return decl;
+			return LuaFunctionDeclaration.from(decl);
 		}
 
 		if (ref instanceof LocalFunctionDeclaration decl) {
-			return decl;
+			return LuaFunctionDeclaration.from(decl);
 		}
 		
 		if (ref instanceof ExpFunctionDeclaration decl) {
-			return decl;
+			return LuaFunctionDeclaration.from(decl);
 		}
 		
 		if (LuaUtil.isMocked(ref)) {

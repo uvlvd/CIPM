@@ -10,8 +10,10 @@ import tools.vitruv.dsls.reactions.runtime.correspondence.ReactionsCorrespondenc
 
 public class CorrespondenceUtil {
     public static <C extends EObject> C getCorrespondingEObjectByType(
-            CorrespondenceModelView<ReactionsCorrespondence> correspondenceModel, EObject eObj,
-            Class<C> clazz) {
+            CorrespondenceModelView<ReactionsCorrespondence> correspondenceModel, 
+            EObject eObj,
+            Class<C> clazz
+            ) {
         var opt = correspondenceModel.getCorrespondingEObjects(eObj)
             .stream()
             .filter(clazz::isInstance)
@@ -25,8 +27,10 @@ public class CorrespondenceUtil {
     }
 
     public static <C extends EObject> List<C> getCorrespondingEObjectsByType(
-            CorrespondenceModelView<ReactionsCorrespondence> correspondenceModel, EObject eObj,
-            Class<C> clazz) {
+            CorrespondenceModelView<ReactionsCorrespondence> correspondenceModel, 
+            EObject eObj,
+            Class<C> clazz
+            ) {
         return correspondenceModel.getCorrespondingEObjects(eObj)
             .stream()
             .filter(clazz::isInstance)

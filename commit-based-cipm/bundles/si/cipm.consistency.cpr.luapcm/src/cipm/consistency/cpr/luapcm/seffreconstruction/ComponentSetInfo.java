@@ -10,6 +10,7 @@ import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
 import org.palladiosimulator.pcm.seff.AbstractAction;
+import org.xtext.lua.component_extension.Application;
 import org.xtext.lua.component_extension.Component;
 
 import com.google.common.collect.ArrayListMultimap;
@@ -19,6 +20,8 @@ import cipm.consistency.commitintegration.lang.lua.appspace.AppSpaceSemantics;
 import lua.Block;
 import lua.FuncBody;
 import lua.IfThenElse;
+import lua.Referenceable;
+import lua.Stat;
 
 /**
  * This class contains information about a ComponentSet and its contents which is needed during SEFF
@@ -32,17 +35,25 @@ public class ComponentSetInfo {
 
     //TODO: juanj comment: this seems to map some kind of function name encoded in the last argument
     // of the functionCall to that function call (?)
-    private Map<String, Expression_Functioncall_Direct> functionNameToServeCall;
+    //private Map<String, Expression_Functioncall_Direct> functionNameToServeCall;
+    
+    /**
+     * Mapping between function declarations and their external calls, i.e. calls from outside the 
+     * function declaration's component.
+     */
+    // TODO: shouldn't this be able to hold multiple function calls? Seems plausible that 
+    // multiple componenets inside a component set call the same function of one of the components...
+    private Map<LuaFunctionDeclaration, LuaFunctionCall> functionToExternalFunctionCall;
 
     // we track which Statement_Function_Declaration are called in an external call action
-    private ListMultimap<Statement_Function_Declaration, AbstractAction> declarationToCallingActions;
+    private ListMultimap<LuaFunctionDeclaration, AbstractAction> declarationToCallingActions;
 
     // map a component to components it depends upon (because it has external calls to it)
     private ListMultimap<Component, Component> componentToRequiredComponents;
 
     private Set<Block> blocksRequiringActionReconstruction;
 
-    private Set<Statement> refreshedStatements;
+    private Set<Stat> refreshedStatements;
     
     private boolean emulatedInstrumentationRan = false;
     
@@ -52,81 +63,104 @@ public class ComponentSetInfo {
      * 
      * This causes some calculation (served function names).
      * 
-     * @param componentSet
+     * @param application
      *            The component set for which this class will contain infos
      */
-    public ComponentSetInfo(ComponentSet componentSet) {
-        LOGGER.debug("Initializing ComponentSetInfo for " + componentSet.toString());
+    public ComponentSetInfo(Application application) {
+        LOGGER.debug("Initializing ComponentSetInfo for " + application.toString());
 
         declarationToCallingActions = ArrayListMultimap.create();
         componentToRequiredComponents = ArrayListMultimap.create();
         blocksRequiringActionReconstruction = new HashSet<>();
         refreshedStatements = new HashSet<>();
 
-        functionNameToServeCall = generateServedFunctionNames(componentSet);
-        scanFunctionsForActionReconstruction(componentSet);
+//        functionNameToServeCall = generateServedFunctionNamesFor(componentSet);
+        functionToExternalFunctionCall = getFunctionToExternalFunctionCallMapFor(application);
+        scanFunctionsForActionReconstruction(application);
     }
 
     /**
-     * Served function are "exported" an can be called by other appspace apps
-     * 
-     * @param root
-     * @return
+     * Creates and returns a map from function declarations to their external calls, 
+     * i.e. calls from from outside the component containing the function declaration.
      */
-    private static Map<String, Expression_Functioncall_Direct> generateServedFunctionNames(EObject root) {
-        Map<String, Expression_Functioncall_Direct> servedNamesToServeCalls = new HashMap<>();
-
-        var functionCalls = EcoreUtil2.getAllContentsOfType(root, Expression_Functioncall_Direct.class);
+    //TODO: comment juanj: previously: private static Map<String, Expression_Functioncall_Direct> generateServedFunctionNames(EObject root) {
+    private Map<LuaFunctionDeclaration, LuaFunctionCall> getFunctionToExternalFunctionCallMapFor(EObject root) {
+    	Map<LuaFunctionDeclaration, LuaFunctionCall> result = new HashMap<>();
+    	
+        final var functionCalls = LuaUtil.getExternalFunctionCallsContainedIn(root);
         for (var functionCall : functionCalls) {
-            if (!AppSpaceSemantics.isServingFunctionCall(functionCall)) {
-                continue;
-            }
-
-            var args = functionCall.getCalledFunctionArgs()
-                .getArguments();
-            if (args.size() == 2 || args.size() == 3) {
-                var nameIndex = args.size() - 1;
-                var funcName = args.get(nameIndex);
-                if (funcName instanceof Expression_String funcNameExpString) {
-                    servedNamesToServeCalls.put(funcNameExpString.getValue(), functionCall);
-                } else if (funcName instanceof Expression_VariableName funcNameExpVar) {
-                    servedNamesToServeCalls.put(funcNameExpVar.getRef()
-                        .getName(), functionCall);
-                } else {
-                    throw new IllegalStateException("Invalid Script.serveFunction call: Arguments are of invalid type");
-                }
-            } else {
-                throw new IllegalStateException("Invalid Script.serveFunction call: Must have 2 or 3 arguments");
-            }
+        	result.put(functionCall.getCalledFunction(), functionCall);	
         }
-        return servedNamesToServeCalls;
+        
+        return result;
+        
+        // does this handle one component set?
+		//  - "appspace apps" i think are component sets
+		// In this function:
+		//  - EcoreUtil2 finds all function calls in the given set
+		//  - AppSpaceSemantics.isServingFunctionCall(functionCall) checks if the CALLED function is a served function (?)
+		//  - the last parameter of the function call is the called function's name?
+		// => so basically, it seems this function iterates over all calls in a component set and
+		//    populates the map depending on some abstruse, non-documented criteria regarding the called function's
+		//    name and argument count to find calls to external services. (?)
+    	
+//    	Map<String, Expression_Functioncall_Direct> servedNamesToServeCalls = new HashMap<>();
+//
+//        var functionCalls = EcoreUtil2.getAllContentsOfType(root, Expression_Functioncall_Direct.class);
+//        for (var functionCall : functionCalls) {
+//            if (!AppSpaceSemantics.isServingFunctionCall(functionCall)) {
+//                continue;
+//            }
+//
+//            var args = functionCall.getCalledFunctionArgs()
+//                .getArguments();
+//            if (args.size() == 2 || args.size() == 3) {
+//                var nameIndex = args.size() - 1;
+//                var funcName = args.get(nameIndex);
+//                if (funcName instanceof Expression_String funcNameExpString) {
+//                    servedNamesToServeCalls.put(funcNameExpString.getValue(), functionCall);
+//                } else if (funcName instanceof Expression_VariableName funcNameExpVar) {
+//                    servedNamesToServeCalls.put(funcNameExpVar.getRef()
+//                        .getName(), functionCall);
+//                } else {
+//                    throw new IllegalStateException("Invalid Script.serveFunction call: Arguments are of invalid type");
+//                }
+//            } else {
+//                throw new IllegalStateException("Invalid Script.serveFunction call: Must have 2 or 3 arguments");
+//            }
+//        }
+//        return servedNamesToServeCalls;
     }
 
     /**
      * Determines if a function declaration requires SEFF reconstruction
      * 
      * 
-     * @param declaration
+     * @param functionDeclaration
      * @return boolean
      */
-    public boolean needsSeffReconstruction(Refble declaration) {
-        return functionNameToServeCall.containsKey(declaration.getName());
+    public boolean needsSeffReconstruction(LuaFunctionDeclaration functionDeclaration) {
+        return functionToExternalFunctionCall.containsKey(functionDeclaration);
     }
 
     /**
      * Returns the serve call that causes a function to be served
      * 
-     * @param declaration
+     * @param functionDeclaration
      * @return
      */
-    public Expression_Functioncall_Direct getServeCallForDeclaration(Refble declaration) {
-        return functionNameToServeCall.get(declaration.getName());
+    // TODO: serve calls are specific to SICK appspace apps, this needs to be fixed for generic lua apps
+    public LuaFunctionCall getServeCallForDeclaration(LuaFunctionDeclaration functionDeclaration) {
+        return functionToExternalFunctionCall.get(functionDeclaration);
     }
 
-    public ListMultimap<Statement_Function_Declaration, AbstractAction> getDeclarationToCallingActions() {
+    // TODO: maps should not be modified from outside of this class, implement something like
+    // addActionForDeclaration(LuaFunctionDeclaration, Abstractaction) and use that...
+    public ListMultimap<LuaFunctionDeclaration, AbstractAction> getDeclarationToCallingActions() {
         return declarationToCallingActions;
     }
-
+    
+    // TODO: same here, why is this direct access to the map provided?
     public ListMultimap<Component, Component> getComponentToRequiredComponents() {
         return componentToRequiredComponents;
     }
@@ -201,8 +235,8 @@ public class ComponentSetInfo {
 //        return blocks;
 //    }
 
-    private void scanFunctionsForActionReconstruction(ComponentSet componentSet) {
-        var functionDecls = EcoreUtil2.getAllContentsOfType(componentSet, Statement_Function_Declaration.class);
+    private void scanFunctionsForActionReconstruction(Application application) {
+        var functionDecls = LuaUtil.getAllFunctionDeclarationsContainedIn(application);
         for (var functionDecl : functionDecls) {
             if (needsSeffReconstruction(functionDecl)) {
                 scanSeffFunctionForActionReconstruction(functionDecl);
@@ -210,33 +244,56 @@ public class ComponentSetInfo {
         }
     }
 
-    private void scanSeffFunctionForActionReconstruction(Statement_Function_Declaration decl) {
+    private void scanSeffFunctionForActionReconstruction(LuaFunctionDeclaration functionDeclaration) {
         /*
          * We always mark the root block of a seff function for reconstruction. The SEFF may only
          * contain an internal action in which case the marking algorithm will not catch the root
          * block.
          */
-        var func = decl.getFunction();
-        if (func != null) {
-            var rootBlock = func.getBlock();
-            if (rootBlock != null) {
-                markBlockForActionReconstruction(rootBlock);
-            }
-        }
+        final var block = functionDeclaration.getBlock();
+        markBlockForActionReconstruction(block);
+
 
         /*
          * Mark architecturally relevant calls and all the blocks from them to the top level of
          * their containing declaration
          */
-        var statements = EcoreUtil2.getAllContentsOfType(decl, Statement.class);
+        var statements = EcoreUtil2.getAllContentsOfType(functionDeclaration.getRoot(), Stat.class);
         for (var statement : statements) {
             if (!needsActionReconstruction(statement)
                     && ActionReconstruction.doesStatementContainArchitecturallyRelevantCall(statement, this)) {
                 // mark objects and its parent towards the declaration for action reconstruction
                 LOGGER.debug("Scan found cause for action reconstruction: " + statement.toString());
-                markObjectAndParentsForActionReconstruction(statement, decl);
+                markObjectAndParentsForActionReconstruction(statement, functionDeclaration);
             }
         }
+        
+//        /*
+//         * We always mark the root block of a seff function for reconstruction. The SEFF may only
+//         * contain an internal action in which case the marking algorithm will not catch the root
+//         * block.
+//         */
+//        var func = functionDeclaration.getFunction();
+//        if (func != null) {
+//            var rootBlock = func.getBlock();
+//            if (rootBlock != null) {
+//                markBlockForActionReconstruction(rootBlock);
+//            }
+//        }
+//
+//        /*
+//         * Mark architecturally relevant calls and all the blocks from them to the top level of
+//         * their containing declaration
+//         */
+//        var statements = EcoreUtil2.getAllContentsOfType(functionDeclaration, Statement.class);
+//        for (var statement : statements) {
+//            if (!needsActionReconstruction(statement)
+//                    && ActionReconstruction.doesStatementContainArchitecturallyRelevantCall(statement, this)) {
+//                // mark objects and its parent towards the declaration for action reconstruction
+//                LOGGER.debug("Scan found cause for action reconstruction: " + statement.toString());
+//                markObjectAndParentsForActionReconstruction(statement, functionDeclaration);
+//            }
+//        }
     }
 
     /*
@@ -245,22 +302,23 @@ public class ComponentSetInfo {
      * 
      * Also marks all other statements in blocks which are traversed.
      */
-    private void markObjectAndParentsForActionReconstruction(Statement statement, Statement_Function_Declaration decl) {
-        EObject current = statement;
+    private void markObjectAndParentsForActionReconstruction(Stat statement, LuaFunctionDeclaration functionDeclaration) {
+        
+    	EObject current = statement;
         do {
             if (current instanceof Block block) {
                 markBlockForActionReconstruction(block);
-            } else if (current instanceof Statement_If_Then_Else ifStatement) {
+            } else if (current instanceof IfThenElse ifStatement) {
                 // also mark other child block when marking branch actions
                 // mark other branches
-                for (var block : getBlocksFromIfStatement(ifStatement)) {
+                for (var block : LuaUtil.getBlocksFromIfStatement(ifStatement)) {
                     markBlockForActionReconstruction(block);
                 }
             }
 
             // continue traversal
             current = current.eContainer();
-        } while (!current.equals(decl));
+        } while (!current.equals(functionDeclaration.getContainingStat()));
     }
 
     private void markBlockForActionReconstruction(Block block) {
@@ -276,7 +334,7 @@ public class ComponentSetInfo {
         this.emulatedInstrumentationRan = emulatedInstrumentationRan;
     }
 
-    public Set<Statement> getRefreshedStatements() {
+    public Set<Stat> getRefreshedStatements() {
         return refreshedStatements;
     }
 }
