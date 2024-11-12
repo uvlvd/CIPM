@@ -8,12 +8,12 @@ import org.palladiosimulator.pcm.seff.ResourceDemandingBehaviour;
 import org.palladiosimulator.pcm.seff.StartAction;
 import org.palladiosimulator.pcm.seff.StopAction;
 import org.xtext.lua.lua.Block;
-import org.xtext.lua.lua.LastStatement;
-import org.xtext.lua.lua.Refble;
-import org.xtext.lua.lua.Statement;
 
 import com.google.common.collect.Iterables;
 
+import lua.LastStat;
+import lua.Referenceable;
+import lua.Stat;
 import tools.vitruv.change.correspondence.view.CorrespondenceModelView;
 import tools.vitruv.change.correspondence.view.EditableCorrespondenceModelView;
 import tools.vitruv.dsls.reactions.runtime.correspondence.ReactionsCorrespondence;
@@ -56,15 +56,18 @@ public class ActionUtil {
         succ.setPredecessor_AbstractAction(pred);
     }
 
-    public static int getMinStatementIndexOfCorrespondingAction(Statement statement, Block block,
+    public static int getMinStatementIndexOfCorrespondingAction(Stat statement, Block block,
             EditableCorrespondenceModelView<ReactionsCorrespondence> cmv) {
         var index = Integer.MAX_VALUE;
-        var actionsOfStatement = CorrespondenceUtil.getCorrespondingEObjectsByType(cmv, statement,
-                AbstractAction.class);
+        var actionsOfStatement = CorrespondenceUtil.getCorrespondingEObjectsByType(
+        		cmv, 
+        		statement,
+                AbstractAction.class
+        );
         for (var action : actionsOfStatement) {
-            var statementsOfAction = CorrespondenceUtil.getCorrespondingEObjectsByType(cmv, action, Statement.class);
+            var statementsOfAction = CorrespondenceUtil.getCorrespondingEObjectsByType(cmv, action, Stat.class);
             for (var statementOfAction : statementsOfAction) {
-                var statementIndex = block.getStatements().indexOf(statementOfAction);
+                var statementIndex = block.getStats().indexOf(statementOfAction);
                 if (statementIndex < index) {
                     index = statementIndex;
                 }
@@ -74,15 +77,18 @@ public class ActionUtil {
         return index;
     }
 
-    public static int getMaxStatementIndexOfCorrespondingAction(Statement statement, Block block,
+    public static int getMaxStatementIndexOfCorrespondingAction(Stat statement, Block block,
             EditableCorrespondenceModelView<ReactionsCorrespondence> cmv) {
         var index = -1;
-        var actionsOfStatement = CorrespondenceUtil.getCorrespondingEObjectsByType(cmv, statement,
-                AbstractAction.class);
+        var actionsOfStatement = CorrespondenceUtil.getCorrespondingEObjectsByType(
+        		cmv, 
+        		statement,
+                AbstractAction.class
+        );
         for (var action : actionsOfStatement) {
-            var statementsOfAction = CorrespondenceUtil.getCorrespondingEObjectsByType(cmv, action, Statement.class);
+            var statementsOfAction = CorrespondenceUtil.getCorrespondingEObjectsByType(cmv, action, Stat.class);
             for (var statementOfAction : statementsOfAction) {
-                var statementIndex = block.getStatements().indexOf(statementOfAction);
+                var statementIndex = block.getStats().indexOf(statementOfAction);
                 if (statementIndex > index) {
                     index = statementIndex;
                 }
@@ -92,12 +98,16 @@ public class ActionUtil {
         return index;
     }
 
-    public static AbstractAction getPreviousActionOfStatement(EObject statement, Block block,
-            ResourceDemandingBehaviour rdBehaviour, EditableCorrespondenceModelView<ReactionsCorrespondence> cmv) {
-        var blockStatements = block.getStatements();
+    public static AbstractAction getPreviousActionOfStatement(
+    		EObject statement,
+    		Block block,
+            ResourceDemandingBehaviour rdBehaviour, 
+            EditableCorrespondenceModelView<ReactionsCorrespondence> cmv
+            ) {
+        var blockStatements = block.getStats();
         var statementIndex = blockStatements.indexOf(statement);
 
-        if (statement instanceof LastStatement) {
+        if (statement instanceof LastStat) {
             // return statements start with the last statement
             statementIndex = blockStatements.size() - 1;
         }
@@ -125,12 +135,16 @@ public class ActionUtil {
         return null;
     }
 
-    public static AbstractAction getSubsequentActionOfStatement(EObject statement, Block block,
-            ResourceDemandingBehaviour rdBehaviour, CorrespondenceModelView<ReactionsCorrespondence> cmv) {
-        var blockStatements = block.getStatements();
+    public static AbstractAction getSubsequentActionOfStatement(
+    		EObject statement, 
+    		Block block,
+            ResourceDemandingBehaviour rdBehaviour, 
+            CorrespondenceModelView<ReactionsCorrespondence> cmv
+            ) {
+        var blockStatements = block.getStats();
         var statementIndex = blockStatements.indexOf(statement);
         
-        if (statement instanceof LastStatement) {
+        if (statement instanceof LastStat) {
             // return statements have the stop action as successor
             for (var action : rdBehaviour.getSteps_Behaviour()) {
                 if (action instanceof StopAction) {
@@ -163,8 +177,8 @@ public class ActionUtil {
     }
     
     public static String getBlockName(Block block) {
-        var parentStatement = EcoreUtil2.getContainerOfType(block, Statement.class);
-        if (parentStatement instanceof Refble refble) {
+        var parentStatement = EcoreUtil2.getContainerOfType(block, Stat.class);
+        if (parentStatement instanceof Referenceable refble) {
             return refble.getName() + "_ROOT_BLOCK";
         }
         return parentStatement.toString();
