@@ -5,7 +5,7 @@ import cipm.consistency.commitintegration.lang.detection.ComponentState;
 import cipm.consistency.commitintegration.lang.detection.strategy.ComponentDetectionStrategy;
 import java.nio.file.Path;
 import org.eclipse.emf.ecore.resource.Resource;
-import org.xtext.lua.scoping.LuaLinkingService;
+import org.xtext.lua.lua.scoping.LuaLinkingService;
 
 public class StdLibCrownComponentDetectionStrategy implements ComponentDetectionStrategy {
 

@@ -11,9 +11,9 @@ import org.xtext.lua.lua.Block;
 
 import com.google.common.collect.Iterables;
 
-import lua.LastStat;
-import lua.Referenceable;
-import lua.Stat;
+import org.xtext.lua.lua.LastStat;
+import org.xtext.lua.lua.Referenceable;
+import org.xtext.lua.lua.Stat;
 import tools.vitruv.change.correspondence.view.CorrespondenceModelView;
 import tools.vitruv.change.correspondence.view.EditableCorrespondenceModelView;
 import tools.vitruv.dsls.reactions.runtime.correspondence.ReactionsCorrespondence;

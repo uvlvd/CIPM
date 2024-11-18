@@ -6,23 +6,18 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
-import org.eclipse.xtext.EcoreUtil2;
 import org.palladiosimulator.pcm.core.CoreFactory;
 import org.palladiosimulator.pcm.repository.OperationSignature;
 import org.palladiosimulator.pcm.seff.AbstractAction;
 import org.palladiosimulator.pcm.seff.InternalCallAction;
 import org.palladiosimulator.pcm.seff.ResourceDemandingSEFF;
 import org.palladiosimulator.pcm.seff.SeffFactory;
+import org.xtext.lua.lua.Block;
+import org.xtext.lua.lua.IfThenElse;
+import org.xtext.lua.lua.Stat;
 
 import cipm.consistency.cpr.luapcm.Config;
 import cipm.consistency.cpr.luapcm.Config.ReconstructionType;
-import lua.Block;
-import lua.GenericFor;
-import lua.IfThenElse;
-import lua.NumericFor;
-import lua.RepeatLoop;
-import lua.Stat;
-import lua.WhileLoop;
 import tools.vitruv.change.correspondence.view.EditableCorrespondenceModelView;
 import tools.vitruv.dsls.reactions.runtime.correspondence.ReactionsCorrespondence;
 

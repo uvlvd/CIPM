@@ -8,16 +8,16 @@ import java.util.stream.Collectors;
 import org.apache.log4j.Logger;
 import org.eclipse.xtext.EcoreUtil2;
 
-import lua.Chunk;
+import org.xtext.lua.lua.Chunk;
 import org.xtext.lua.component_extension.Application;
 
 /*
-import org.xtext.lua.LuaUtil;
-import org.xtext.lua.lua.Expression_Functioncall_Direct;
-import org.xtext.lua.lua.Expression_String;
-import org.xtext.lua.lua.Expression_VariableName;
-import org.xtext.lua.lua.Statement_Function_Declaration;
-import org.xtext.lua.scoping.LuaLinkingService;
+import org.xtext.lua.lua.LuaUtil;
+import org.xtext.lua.lua.lua.Expression_Functioncall_Direct;
+import org.xtext.lua.lua.lua.Expression_String;
+import org.xtext.lua.lua.lua.Expression_VariableName;
+import org.xtext.lua.lua.lua.Statement_Function_Declaration;
+import org.xtext.lua.lua.scoping.LuaLinkingService;
 */
 
 public class LuaPostProcessor {

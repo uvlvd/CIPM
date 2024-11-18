@@ -5,14 +5,14 @@ import java.util.List;
 
 import org.eclipse.xtext.EcoreUtil2;
 
-import lua.Arg;
-import lua.Block;
-import lua.ExpFunctionDeclaration;
-import lua.FunctionDeclaration;
-import lua.LocalFunctionDeclaration;
-import lua.ParList;
-import lua.Referenceable;
-import lua.Stat;
+import org.xtext.lua.lua.Arg;
+import org.xtext.lua.lua.Block;
+import org.xtext.lua.lua.ExpFunctionDeclaration;
+import org.xtext.lua.lua.FunctionDeclaration;
+import org.xtext.lua.lua.LocalFunctionDeclaration;
+import org.xtext.lua.lua.ParList;
+import org.xtext.lua.lua.Referenceable;
+import org.xtext.lua.lua.Stat;
 
 public class LuaFunctionDeclaration {
 	

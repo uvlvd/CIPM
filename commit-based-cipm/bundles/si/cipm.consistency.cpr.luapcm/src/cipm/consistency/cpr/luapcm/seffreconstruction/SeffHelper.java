@@ -2,8 +2,6 @@ package cipm.consistency.cpr.luapcm.seffreconstruction;
 
 import org.apache.log4j.Logger;
 
-import lua.Referenceable;
-
 public class SeffHelper {
     private static final Logger LOGGER = Logger.getLogger(SeffHelper.class.getName());
 

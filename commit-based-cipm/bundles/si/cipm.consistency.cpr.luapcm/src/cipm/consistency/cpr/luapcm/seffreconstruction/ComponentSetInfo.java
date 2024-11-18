@@ -12,16 +12,13 @@ import org.eclipse.xtext.EcoreUtil2;
 import org.palladiosimulator.pcm.seff.AbstractAction;
 import org.xtext.lua.component_extension.Application;
 import org.xtext.lua.component_extension.Component;
+import org.xtext.lua.lua.Block;
+import org.xtext.lua.lua.FuncBody;
+import org.xtext.lua.lua.IfThenElse;
+import org.xtext.lua.lua.Stat;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
-
-import cipm.consistency.commitintegration.lang.lua.appspace.AppSpaceSemantics;
-import lua.Block;
-import lua.FuncBody;
-import lua.IfThenElse;
-import lua.Referenceable;
-import lua.Stat;
 
 /**
  * This class contains information about a ComponentSet and its contents which is needed during SEFF
@@ -140,6 +137,9 @@ public class ComponentSetInfo {
      * @return boolean
      */
     public boolean needsSeffReconstruction(LuaFunctionDeclaration functionDeclaration) {
+    	// TODO: this needs to be changed to return true for all function declarations that are globally accessible,
+    	// i.e. global function declarations or local function declarations or expressions that are returned from the
+    	// lua file
         return functionToExternalFunctionCall.containsKey(functionDeclaration);
     }
 

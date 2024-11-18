@@ -3,16 +3,17 @@ package cipm.consistency.cpr.luapcm.seffreconstruction;
 import org.apache.log4j.Logger;
 import org.eclipse.xtext.EcoreUtil2;
 
-import lua.ExpFunctionDeclaration;
-import lua.Feature;
-import lua.FunctionCall;
-import lua.FunctionCallStat;
-import lua.FunctionDeclaration;
-import lua.LocalFunctionDeclaration;
-import lua.MethodCall;
-import lua.NamedFeature;
-import lua.Referenceable;
-import lua.Referencing;
+import org.xtext.lua.lua.ExpFunctionDeclaration;
+import org.xtext.lua.lua.Feature;
+import org.xtext.lua.lua.FunctionCall;
+import org.xtext.lua.lua.FunctionCallStat;
+import org.xtext.lua.lua.FunctionDeclaration;
+import org.xtext.lua.lua.LocalFunctionDeclaration;
+import org.xtext.lua.lua.MethodCall;
+import org.xtext.lua.lua.NamedFeature;
+import org.xtext.lua.lua.Referenceable;
+import org.xtext.lua.lua.Referencing;
+import org.xtext.lua.utils.LinkingAndScopingUtils;
 
 public class LuaFunctionCall {
 	private static final Logger LOGGER = Logger.getLogger(LuaFunctionCall.class);
@@ -91,8 +92,8 @@ public class LuaFunctionCall {
 		var result = new LuaFunctionCall();
 		
 		final var featureRoot = (Feature) functionCallStat.getPrefix();
-		final var featurePathLeaf = LuaLinkingAndScopingUtils.getFeaturePathLeaf(featureRoot);
-		final var featurePathNamedLeaf = LuaLinkingAndScopingUtils.getFeaturePathNamedLeaf(featureRoot);
+		final var featurePathLeaf = LinkingAndScopingUtils.getFeaturePathLeaf(featureRoot);
+		final var featurePathNamedLeaf = LinkingAndScopingUtils.getFeaturePathNamedLeaf(featureRoot);
 		if (featurePathNamedLeaf instanceof NamedFeature namedLeaf) {
 			result.initFromNamedFeature(featurePathLeaf, namedLeaf);
 		}

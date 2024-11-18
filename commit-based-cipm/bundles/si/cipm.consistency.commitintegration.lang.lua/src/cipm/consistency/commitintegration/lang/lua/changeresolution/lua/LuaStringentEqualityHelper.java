@@ -5,7 +5,7 @@ import org.eclipse.emf.ecore.EObject;
 
 import com.google.common.cache.LoadingCache;
 
-import lua.Assignment;
+import org.xtext.lua.lua.Assignment;
 
 /**
  * A more stringent equality helper for the evaluation

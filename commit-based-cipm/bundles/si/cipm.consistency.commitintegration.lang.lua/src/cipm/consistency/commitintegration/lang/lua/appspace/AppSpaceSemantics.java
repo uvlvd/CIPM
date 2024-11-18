@@ -2,15 +2,18 @@ package cipm.consistency.commitintegration.lang.lua.appspace;
 
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
-import org.xtext.lua.LuaUtil;
-import lua.Chunk;
-import org.xtext.lua.lua.Expression_Functioncall_Direct;
-import org.xtext.lua.lua.Expression_String;
-import org.xtext.lua.lua.Expression_VariableName;
-import org.xtext.lua.lua.Statement_Function_Declaration;
+import org.xtext.lua.lua.Chunk;
+/*
+import org.xtext.lua.lua.LuaUtil;
+import org.xtext.lua.lua.lua.Expression_Functioncall_Direct;
+import org.xtext.lua.lua.lua.Expression_String;
+import org.xtext.lua.lua.lua.Expression_VariableName;
+import org.xtext.lua.lua.lua.Statement_Function_Declaration;
+*/
 
+// TODO: remove this class and maybe the package
 public class AppSpaceSemantics {
-
+/*
     private static final String SERVE_FUNCTION_NAME = "Script.serveFunction";
     private static final int SERVE_FUNCTION_ARG_COUNT = 2;
     private static final String REGISTER_FUNCTION_SUFFIX = ".register";
@@ -63,4 +66,5 @@ public class AppSpaceSemantics {
         }
         return null;
     }
+    */
 }

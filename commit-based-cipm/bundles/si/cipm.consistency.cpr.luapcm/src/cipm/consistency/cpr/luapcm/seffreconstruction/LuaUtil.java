@@ -1,37 +1,29 @@
 package cipm.consistency.cpr.luapcm.seffreconstruction;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
 import org.xtext.lua.component_extension.Component;
 import org.xtext.lua.linking.SyntheticVar;
-
-import lua.Block;
-import lua.BlockWrapperWithArgs;
-import lua.ElseIf;
-import lua.ExpFunctionDeclaration;
-import lua.FunctionDeclaration;
-import lua.LocalFunctionDeclaration;
-import lua.FuncBody;
-import lua.FunctionCall;
-import lua.FunctionCallStat;
-import lua.FunctionDeclaration;
-import lua.GenericFor;
-import lua.IfThenElse;
-import lua.LocalFunctionDeclaration;
-import lua.MethodCall;
-import lua.NumericFor;
-import lua.Referenceable;
-import lua.RepeatLoop;
-import lua.Stat;
-import lua.WhileLoop;
+import org.xtext.lua.lua.Block;
+import org.xtext.lua.lua.ElseIf;
+import org.xtext.lua.lua.ExpFunctionDeclaration;
+import org.xtext.lua.lua.FunctionCall;
+import org.xtext.lua.lua.FunctionCallStat;
+import org.xtext.lua.lua.FunctionDeclaration;
+import org.xtext.lua.lua.GenericFor;
+import org.xtext.lua.lua.IfThenElse;
+import org.xtext.lua.lua.LocalFunctionDeclaration;
+import org.xtext.lua.lua.MethodCall;
+import org.xtext.lua.lua.NumericFor;
+import org.xtext.lua.lua.Referenceable;
+import org.xtext.lua.lua.RepeatLoop;
+import org.xtext.lua.lua.Stat;
+import org.xtext.lua.lua.WhileLoop;
 
 public class LuaUtil {
 	

@@ -7,6 +7,7 @@ import cipm.consistency.cpr.luapcm.seffreconstruction.BranchActionUtil
 import cipm.consistency.cpr.luapcm.seffreconstruction.ComponentSetInfoRegistry
 import cipm.consistency.cpr.luapcm.seffreconstruction.CorrespondenceUtil
 import cipm.consistency.cpr.luapcm.seffreconstruction.SeffHelper
+import cipm.consistency.cpr.luapcm.seffreconstruction.LuaFunctionDeclaration
 import cipm.consistency.tools.evaluation.data.EvaluationDataContainer
 import org.eclipse.xtext.EcoreUtil2
 import org.palladiosimulator.pcm.repository.BasicComponent
@@ -18,12 +19,12 @@ import org.palladiosimulator.pcm.seff.InternalAction
 import org.palladiosimulator.pcm.seff.LoopAction
 import org.palladiosimulator.pcm.seff.ProbabilisticBranchTransition
 import org.palladiosimulator.pcm.seff.SeffFactory
-import org.xtext.lua.LuaUtil
+import org.xtext.lua.lua.LuaUtil
 import org.xtext.lua.lua.Block
 import org.xtext.lua.lua.LastStatement_Return_WithValue
 import org.xtext.lua.lua.LuaPackage
-import org.xtext.lua.lua.Statement
-import org.xtext.lua.lua.Statement_Function_Declaration
+import org.xtext.lua.lua.Stat
+//import org.xtext.lua.lua.Statement_Function_Declaration
 import tools.vitruv.change.atomic.feature.FeatureEChange
 
 import "http://www.xtext.org/lua/Lua" as lua
@@ -1137,7 +1138,7 @@ routine createSeffForDeclaration(lua::Statement_Function_Declaration declaration
 	}
 }
 
-routine removeSeffForDeclaration(lua::Statement_Function_Declaration declaration) {
+routine removeSeffForDeclaration(LuaFunctionDeclaration declaration) {
 	match {
 		val rdSeff = retrieve optional pcm::ResourceDemandingSEFF corresponding to declaration
 	}

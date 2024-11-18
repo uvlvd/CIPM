@@ -19,12 +19,9 @@ import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.resource.XtextResource;
 import org.eclipse.xtext.resource.XtextResourceSet;
 import org.xtext.lua.LuaStandaloneSetup;
-//import org.xtext.lua.LuaStandaloneSetup;
-//import lua.Chunk;
 import org.xtext.lua.component_extension.Application;
-//import org.xtext.lua.component_extension.lua.LuaFactory;
 import org.xtext.lua.component_extension.Component_extensionFactory;
-import lua.Chunk;
+import org.xtext.lua.lua.Chunk;
 
 import com.google.inject.Inject;
 import com.google.inject.Injector;
