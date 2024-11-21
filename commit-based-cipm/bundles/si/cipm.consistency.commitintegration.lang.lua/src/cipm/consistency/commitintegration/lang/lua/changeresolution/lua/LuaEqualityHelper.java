@@ -112,7 +112,7 @@ import com.google.common.cache.LoadingCache;
  * The {@link #LuaHierarchicalMatchEngineFactory} implements hierarchical matching, i.e. the
  * left and right EObjects matched by this EqualityHelper class are assumed to always be on the same level
  * in the "trees" of the compared models.
- * @author juanj
+ * @author jsaenz
  *
  */
 public class LuaEqualityHelper extends EqualityHelper {
@@ -373,7 +373,7 @@ public class LuaEqualityHelper extends EqualityHelper {
         }
         // TODO remove if this does not help:
         // seems to help but not perfectly
-        // TODO: comment by juanj: why not match the stats? seems to have been tried before with !match(left.getBlock(), right.getBlock())...
+        // TODO: comment by jsaenz: why not match the stats? seems to have been tried before with !match(left.getBlock(), right.getBlock())...
         if (!matchEListByClass(left.getThenBlock().getStats(), right.getThenBlock().getStats())) {
             return false;
         }
@@ -385,7 +385,7 @@ public class LuaEqualityHelper extends EqualityHelper {
 
     protected boolean match(ElseIf left, ElseIf right) {
         // TODO is this enough?
-    	// TODO: comment by juanj: it should be, assuming that only ElseIfs contained in the same IfThenElse are
+    	// TODO: comment by jsaenz: it should be, assuming that only ElseIfs contained in the same IfThenElse are
     	// compared (hierarchical matching) and that an ElseIf with the same condition as another in the same IfThenElse
     	// seems illogical.
         return match(left.getCondition(), right.getCondition());

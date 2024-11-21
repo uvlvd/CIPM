@@ -19,23 +19,32 @@ import org.palladiosimulator.pcm.seff.InternalAction
 import org.palladiosimulator.pcm.seff.LoopAction
 import org.palladiosimulator.pcm.seff.ProbabilisticBranchTransition
 import org.palladiosimulator.pcm.seff.SeffFactory
-import org.xtext.lua.lua.LuaUtil
+//import org.xtext.lua.lua.LuaUtil
 import org.xtext.lua.lua.Block
-import org.xtext.lua.lua.LastStatement_Return_WithValue
+//import org.xtext.lua.lua.LastStatement_Return_WithValue
 import org.xtext.lua.lua.LuaPackage
 import org.xtext.lua.lua.Stat
+import org.xtext.lua.component_extension.Component
+import org.xtext.lua.component_extension.Application
+import org.xtext.lua.component_extension.NamedChunk
 //import org.xtext.lua.lua.Statement_Function_Declaration
 import tools.vitruv.change.atomic.feature.FeatureEChange
+import cipm.consistency.cpr.luapcm.LuaPcmUpdateUtil
+import org.xtext.lua.lua.Return
+import cipm.consistency.cpr.luapcm.seffreconstruction.LuaUtil
+import org.xtext.lua.utils.LinkingAndScopingUtils
+import cipm.consistency.cpr.luapcm.seffreconstruction.LuaFunctionCall
 
+import "http://www.example.org/component_extension" as ce
 import "http://www.xtext.org/lua/Lua" as lua
 import "http://palladiosimulator.org/PalladioComponentModel/5.2" as pcm
 import "http://www.dmodel.com/InstrumentationMetamodel" as im
 
 reactions: luaPcmUpdate
-in reaction to changes in lua
+in reaction to changes in lua and ce
 execute actions in pcm and im
 
-/**
+/** 
  * 
  * TODO TODO TODO
  * 
@@ -79,7 +88,8 @@ reaction AddedBlock {
 	after element lua::Block created
 	call {
 		createRDBehaviourForBlock(affectedEObject)
-		updateStepsBehaviour(affectedEObject, affectedEObject.returnValue, null)
+		//updateStepsBehaviour(affectedEObject, affectedEObject.returnValue, null)
+		updateStepsBehaviour(affectedEObject, affectedEObject.lastStat, null)
 	}
 }
 
@@ -93,9 +103,11 @@ reaction RemovedBlock {
 
 // TODO this was added last minute and could probably use a look over
 reaction ChangedBlockReturn {
-	after element replaced at lua::Block[returnValue]
+	//after element replaced at lua::Block[returnValue]
+	after element replaced at lua::Block[lastStat]
 	call {
-		val parentDeclaration = EcoreUtil2.getContainerOfType(affectedEObject, Statement_Function_Declaration)
+		//val parentDeclaration = EcoreUtil2.getContainerOfType(affectedEObject, Statement_Function_Declaration)
+		val parentDeclaration = LuaPcmUpdateUtil.getParentFunctionDeclarationEObject(affectedEObject)
 		if (parentDeclaration !== null) {
 			updateOperationSignature(parentDeclaration, newValue)
 			updateStepsBehaviour(affectedEObject, newValue, oldValue)
@@ -104,13 +116,15 @@ reaction ChangedBlockReturn {
 }
 
 reaction RemovedBlockReturn {
-	after element removed from lua::Block[returnValue]
+	//after element removed from lua::Block[returnValue]
+	after element removed from lua::Block[lastStat]
 	call {
 		removeActionsForStatement(oldValue, affectedEObject)
 	}
 }
 
-routine updateStepsBehaviour(lua::Block block, lua::LastStatement lastStatement, lua::LastStatement prev) {
+//routine updateStepsBehaviour(lua::Block block, lua::LastStatement lastStatement, lua::LastStatement prev) {
+routine updateStepsBehaviour(lua::Block block, lua::LastStat lastStatement, lua::LastStat prev) {
 	match {
 		val rdBehaviour = retrieve pcm::ResourceDemandingBehaviour corresponding to block
 	}
@@ -123,8 +137,12 @@ routine updateStepsBehaviour(lua::Block block, lua::LastStatement lastStatement,
 	}
 }
 
+/**
+ * The passed EObject should be a lua function declaration, not any kind of EObject.
+ */
 // TODO move this to the other routines
-routine updateOperationSignature(lua::Statement_Function_Declaration declaration, lua::LastStatement returnValue) {
+//routine updateOperationSignature(lua::Statement_Function_Declaration declaration, lua::LastStatement returnValue) {
+routine updateOperationSignature(EObject declaration, lua::LastStat returnValue) {
 	match {
 		val signature = retrieve optional pcm::OperationSignature corresponding to declaration
 		val luaAnyType = retrieve pcm::DataType corresponding to RepositoryPackage.Literals.REPOSITORY
@@ -133,8 +151,10 @@ routine updateOperationSignature(lua::Statement_Function_Declaration declaration
 		if (signature.empty) {
 			return
 		}
-		if (returnValue instanceof LastStatement_Return_WithValue) {
-			if (returnValue.returnValues.size > 0) {
+		//if (returnValue instanceof LastStatement_Return_WithValue) {
+		if (returnValue instanceof Return) {
+			//if (returnValue.returnValues.size > 0) {
+			if (returnValue.expList !== null && returnValue.expList.exps.size > 0) {
 				signature.get.returnType__OperationSignature = luaAnyType
 				return
 			}
@@ -144,11 +164,11 @@ routine updateOperationSignature(lua::Statement_Function_Declaration declaration
 }
 
 reaction AddedLuaComponent {
-	after element lua::Component inserted in lua::ComponentSet[components]
+	after element ce::Component inserted in ce::Application[components]
 	call {
-		if (newValue.name == "/stdlibAndCrowns.lua") {
-			return
-		}
+		//if (newValue.name == "/stdlibAndCrowns.lua") {
+		//	return
+		//}
 		createBasicComponentForLuaComponent(newValue)
 		createOperationInterfaceForLuaComponent(newValue)
 		createOperationProvidedRoleForLuaComponent(newValue)
@@ -156,7 +176,7 @@ reaction AddedLuaComponent {
 }
 
 reaction RemovedLuaComponent {
-	after element lua::Component removed from lua::ComponentSet[components]
+	after element ce::Component removed from ce::Application[components]
 	call {
 		removeOperationProvidedRoleForLuaComponent(oldValue)
 		removeOperationInterfaceForLuaComponent(oldValue)
@@ -165,47 +185,168 @@ reaction RemovedLuaComponent {
 }
 
 reaction AddedParameter {
-	after element lua::Referenceable inserted in lua::Function[arguments]
+	//after element lua::Referenceable inserted in lua::Function[arguments]
+	after element lua::Referenceable inserted in lua::ArgList[args]
 	call {
-		if (affectedEObject.eContainer instanceof Statement_Function_Declaration) {
-			createParameter(newValue, affectedEObject.eContainer as Statement_Function_Declaration)
+		//if (affectedEObject.eContainer instanceof Statement_Function_Declaration) {
+		val declaration = LuaPcmUpdateUtil.buildParentFunctionDeclarationOf(affectedEObject)
+		if (declaration != null) {
+			createParameter(newValue, declaration)
 		}
 	}
 }
 
 reaction RemovedParameter {
-	after element lua::Referenceable removed from lua::Function[arguments]
+	//after element lua::Referenceable removed from lua::Function[arguments]
+	after element lua::Referenceable removed from lua::ArgList[args]
 	call {
 		deleteParameter(oldValue)
 	}
 }
 
+
+
+
+//***********************************************
+//** Reactions for added function declarations **
+//***********************************************
+
+// TODO: we have three types of declarations, thus we need to define this reaction three times. There might be a better way to 
+// do this with the reactions language, that I don't know about
 reaction AddedDeclaration {
-	after element lua::Statement_Function_Declaration inserted in lua::Block[statements]
+	//after element lua::Statement_Function_Declaration inserted in lua::Block[statements]
+	after element lua::FunctionDeclaration inserted in lua::Block[stats]
 	call {
-		if (SeffHelper.needsSeffReconstruction(newValue)) {
-			createOperationSignatureForStatementFunctionDeclaration(newValue)
+		val declaration = LuaPcmUpdateUtil.buildFunctionDeclaration(newValue)
+		//if (SeffHelper.needsSeffReconstruction(newValue)) {
+		if (SeffHelper.needsSeffReconstruction(declaration)) {
+			//createOperationSignatureForStatementFunctionDeclaration(newValue)
+			createOperationSignatureForStatementFunctionDeclaration(declaration)
+		}
+	}
+}
+reaction AddedLocalDeclaration {
+	//after element lua::Statement_Function_Declaration inserted in lua::Block[statements]
+	after element lua::LocalFunctionDeclaration inserted in lua::Block[stats]
+	call {
+		val declaration = LuaPcmUpdateUtil.buildFunctionDeclaration(newValue)
+		//if (SeffHelper.needsSeffReconstruction(newValue)) {
+		if (SeffHelper.needsSeffReconstruction(declaration)) {
+			//createOperationSignatureForStatementFunctionDeclaration(newValue)
+			createOperationSignatureForStatementFunctionDeclaration(declaration)
+		}
+	}
+}
+//TODO: these assumes that we only need to react to ExpFunctionDeclarations inserted into ExpLists and Fields, not e.g. into ParamArgs.
+//	this should be extended at some point if necessary
+reaction AddedExpDeclarationIntoExpList {
+	//after element lua::Statement_Function_Declaration inserted in lua::Block[statements]
+	after element lua::ExpFunctionDeclaration inserted in lua::ExpList[exps]
+	call {
+		val declaration = LuaPcmUpdateUtil.buildFunctionDeclaration(newValue)
+		//if (SeffHelper.needsSeffReconstruction(newValue)) {
+		if (SeffHelper.needsSeffReconstruction(declaration)) {
+			//createOperationSignatureForStatementFunctionDeclaration(newValue)
+			createOperationSignatureForStatementFunctionDeclaration(declaration)
+		}
+	}
+}
+reaction AddedExpDeclarationIntoFieldList {
+	//after element lua::Statement_Function_Declaration inserted in lua::Block[statements]
+	after element lua::Field inserted in lua::FieldList[fields]
+	call {
+		val expFunctionDeclaration = LuaPcmUpdateUtil.getExpFunctionDeclarationFromField(newValue)
+		if (expFunctionDeclaration !== null) {
+			val declaration = LuaPcmUpdateUtil.buildFunctionDeclaration(expFunctionDeclaration)
+			//if (SeffHelper.needsSeffReconstruction(newValue)) {
+			if (SeffHelper.needsSeffReconstruction(declaration)) {
+				//createOperationSignatureForStatementFunctionDeclaration(newValue)
+				createOperationSignatureForStatementFunctionDeclaration(declaration)
+			}
+		}
+		
+	}
+}
+
+
+
+
+//*************************************************
+//** Reactions for removed function declarations **
+//*************************************************
+
+// TODO: same as with adding function declarations, we need to define multiple reactions for the different
+// function-declaration types. There should be a better way to do this..
+
+reaction RemovedDeclaration {
+	after element lua::FunctionDeclaration removed from lua::Block[stats]
+	call {
+		logger.debug(oldValue.name + ": Function with SEFF removed")
+		val declaration = LuaPcmUpdateUtil.buildFunctionDeclaration(oldValue)
+		if (declaration !== null) {
+			removeOperationSignatureForStatementFunctionDeclaration(declaration)
+		} else {
+			logger.error("Could not remove function " + oldValue.name)
+		}
+	}
+}
+reaction RemovedLocalDeclaration {
+	after element lua::LocalFunctionDeclaration removed from lua::Block[stats]
+	call {
+		logger.debug(oldValue.name + ": Function with SEFF removed")
+		val declaration = LuaPcmUpdateUtil.buildFunctionDeclaration(oldValue)
+		if (declaration !== null) {
+			removeOperationSignatureForStatementFunctionDeclaration(declaration)
+		} else {
+			logger.error("Could not remove function " + oldValue.name)
+		}
+	}
+}
+//TODO: these assume that we only need to react to ExpFunctionDeclarations inserted into ExpLists and Fields, not e.g. into ParamArgs.
+//	this should be extended at some point if necessary
+reaction RemovedExpDeclarationIntoExpList {
+	after element lua::ExpFunctionDeclaration removed from lua::ExpList[exps]
+	call {	
+		logger.debug(oldValue.name + ": Function with SEFF removed")
+		val declaration = LuaPcmUpdateUtil.buildFunctionDeclaration(oldValue)
+		if (declaration !== null) {
+			removeOperationSignatureForStatementFunctionDeclaration(declaration)
+		} else {
+			logger.error("Could not remove function " + oldValue.name)
+		}
+	}
+}
+reaction RemovedExpDeclarationIntoFieldList {
+	//after element lua::Statement_Function_Declaration inserted in lua::Block[statements]
+	after element lua::Field removed from lua::FieldList[fields]
+	call {
+		val expFunctionDeclaration = LuaPcmUpdateUtil.getExpFunctionDeclarationFromField(oldValue)
+		if (expFunctionDeclaration !== null) {
+			logger.debug(oldValue.name + ": Function with SEFF removed")
+			val declaration = LuaPcmUpdateUtil.buildFunctionDeclaration(oldValue)
+			if (declaration !== null) {
+				removeOperationSignatureForStatementFunctionDeclaration(declaration)
+			} else {
+				logger.error("Could not remove function " + oldValue.name)
+			}
 		}
 	}
 }
 
-reaction RemovedDeclaration {
-	after element lua::Statement_Function_Declaration removed from lua::Block[statements]
-	call {
-		logger.debug(oldValue.name + ": Function with SEFF removed")
-		removeOperationSignatureForStatementFunctionDeclaration(oldValue)
-	}
-}
+
+//**************************************
+//** Reactions for changed Statements **
+//**************************************
 
 reaction AddedStatement {
-	after element lua::Statement inserted in lua::Block[statements]
+	after element lua::Stat inserted in lua::Block[stats]
 	call {
 		createActionsForStatement(newValue, affectedEObject)
 	}
 }
 
 reaction RemovedStatement {
-	after element lua::Statement removed from lua::Block[statements]
+	after element lua::Stat removed from lua::Block[stats]
 	call {
 		removeActionsForStatement(oldValue, affectedEObject)
 	}
@@ -216,11 +357,13 @@ reaction ChangedStatement {
 	call {
 		if (change instanceof FeatureEChange) {
 			val affected = change.affectedEObject
-			val parentStatement = EcoreUtil2.getContainerOfType(affected, Statement)
-			if (parentStatement === null) {
+			//val parentStatement = EcoreUtil2.getContainerOfType(affected, Statement)
+			val parentStatementOpt = LinkingAndScopingUtils.getParentStatement(affected);
+			if (parentStatementOpt.isEmpty) {
 				return
 			}
-
+			
+			val parentStatement = parentStatementOpt.get
 			val parentBlock = EcoreUtil2.getContainerOfType(parentStatement, Block)
 			if (parentBlock === null) {
 				return
@@ -240,59 +383,168 @@ reaction ChangedStatement {
 	}
 }
 
-reaction AddedServeCall {
-	after element lua::Expression_Functioncall_Direct created
+
+
+
+
+//****************************************
+//** Reactions for added function calls **
+//****************************************
+
+// TODO: here we have the same problems as for FunctionDeclarations, i.e. multiple types of calls are present in the Lua CM:
+//   FunctionCall, MethodCall and FunctionCallStat
+
+//reaction AddedServeCall {
+reaction AddedFunctionCallStat {
+	after element lua::FunctionCallStat created
 	call {
-		if (AppSpaceSemantics.isServingFunctionCall(affectedEObject)) {
-			var decl = AppSpaceSemantics.getFunctionDeclarationFromServingFunctionCall(affectedEObject)
-			if (decl !== null) {
-				logger.info("ServeCall for declaration was added: " + decl.name)
-				createSeffForDeclaration(decl)
-			} else {
-				logger.info("Cannot locate declaration for new serve call")
-			}
+		val functionCall = LuaPcmUpdateUtil.buildFunctionCall(affectedEObject)
+		//if (AppSpaceSemantics.isServingFunctionCall(affectedEObject)) {
+		if (functionCall !== null && functionCall.isExternal() && !functionCall.isMocked()) {
+			//var decl = AppSpaceSemantics.getFunctionDeclarationFromServingFunctionCall(affectedEObject)
+			var declaration = functionCall.getCalledFunction // null-check already performed by calling isMocked()
+			//if (decl !== null) {
+			logger.info("ServeCall for declaration was added: " + declaration.name)
+			createSeffForDeclaration(declaration)
+			//} else {
+			//	logger.info("Cannot locate declaration for new serve call")
+			//}
+		}
+	}
+}
+reaction AddedFunctionCall {
+	after element lua::FunctionCall created
+	call {
+		val functionCall = LuaPcmUpdateUtil.buildFunctionCall(affectedEObject)
+		if (functionCall !== null && functionCall.isExternal() && !functionCall.isMocked()) {
+			var declaration = functionCall.getCalledFunction // null-check already performed by calling isMocked()
+			logger.info("ServeCall for declaration was added: " + declaration.name)
+			createSeffForDeclaration(declaration)
+		}
+	}
+}
+reaction AddedMethodCall {
+	after element lua::MethodCall created
+	call {
+		val functionCall = LuaPcmUpdateUtil.buildFunctionCall(affectedEObject)
+		if (functionCall !== null && functionCall.isExternal() && !functionCall.isMocked()) {
+			var declaration = functionCall.getCalledFunction // null-check already performed by calling isMocked()
+			logger.info("ServeCall for declaration was added: " + declaration.name)
+			createSeffForDeclaration(declaration)
 		}
 	}
 }
 
-reaction RemovedServeCall {
-	after element lua::Expression_Functioncall_Direct deleted
-//	after element lua::Expression_Functioncall_Direct removed from lua::Block[statements]
+//******************************************
+//** Reactions for removed function calls **
+//******************************************
+// TODO: same redundancies as for adding function calls, adding/removing function declarations..
+
+reaction RemovedFunctionCallStat {
+	after element lua::FunctionCallStat deleted
 	call {
-		tryRemoveSeffForServeCall(affectedEObject)
+		var functionCall = LuaPcmUpdateUtil.buildFunctionCall(affectedEObject)
+		tryRemoveSeffForServeCall(functionCall)
+	}
+}
+reaction RemovedFunctionCal {
+	after element lua::FunctionCall deleted
+	call {
+		var functionCall = LuaPcmUpdateUtil.buildFunctionCall(affectedEObject)
+		tryRemoveSeffForServeCall(functionCall)
+	}
+}
+reaction RemovedMethodCall {
+	after element lua::MethodCall deleted
+	call {
+		var functionCall = LuaPcmUpdateUtil.buildFunctionCall(affectedEObject)
+		tryRemoveSeffForServeCall(functionCall)
 	}
 }
 
-routine tryRemoveSeffForServeCall(lua::Expression_Functioncall_Direct potentialServeCall) {
+// comment jsaenz: I am not sure what this logic is intended to do, so I'm just adapting it to the new CM
+//  but cannot be sure if it is needed or correctly implemented. Summary of what I understand:
+//           - this calls ActionReconstruction.getServeCallForDeclaration
+//           - which calls ComponentSetInfoRegistry to get the ComponentSetInfos
+//           - in the componentsetInfo there is a map apparently containing the last "served" function call returned by 
+// 			   EcoreUtil2.getAllContentsOfType(application, Expression_Functioncall_Direct.class)
+//					-> this might have been changed by my adaptation, since FunctionCallStat, FunctionCall, and MethodCall EObjects are now
+//			           added in sequence, i.e. the last "served" function call is the last MethodCall if one is present, else a FunctionCall, etc.	
+//routine tryRemoveSeffForServeCall(lua::Expression_Functioncall_Direct potentialServeCall) {
+routine tryRemoveSeffForServeCall(plain LuaFunctionCall as potentialServeCall) {	
 	match {
-		val servedDeclaration = retrieve optional lua::Statement_Function_Declaration corresponding to potentialServeCall
+		// comment jsaenz: not sure what this does, but the old servedDeclaration should now be LuaFunctionCall.getFunctionCall().getRoot()
+		//val servedDeclaration = retrieve optional lua::Statement_Function_Declaration corresponding to potentialServeCall
+		val servedDeclaration = retrieve optional EObject corresponding to potentialServeCall.getCallingFeature()
 	}
 	update {
-		if (servedDeclaration.empty) {
+		
+		// TODO: not sure if this does the same as the previous impementation, see comments above this function 
+		// and commented code of previous implementation and above and below
+		
+		// first attempt at adaptation:
+		//if (potentialServeCall.isMocked()) {
+		//	return
+		//}
+		//val declaration = potentialServeCall.getCalledFunction()
+		//var otherServeCall = ActionReconstruction.getServeCallForDeclaration(declaration)
+		//if (otherServeCall !== null) {
+	//		logger.info("Serve call moved / changed, not deleting SEFF for: " + declaration.name)
+//			return
+		//}
+		
+		if (servedDeclaration.isEmpty()) {
 			return
 		}
-
-		val decl = servedDeclaration.get
-		var otherServeCall = ActionReconstruction.getServeCallForDeclaration(decl)
+		val declaration = LuaPcmUpdateUtil.buildFunctionDeclaration(servedDeclaration.get());
+		if (declaration === null) return
+		// TODO: this will probably not work, since the declaration here and the one returned by getServeCallForDeclaration
+		//       are not the same Java Objects! -> should implement the Map in ComponentSetInfo in such a way that it contains the Lua
+		//       object, not the LuaFunctionDeclaration as key, or some other identifier as key 
+		var otherServeCall = ActionReconstruction.getServeCallForDeclaration(declaration)
 		if (otherServeCall !== null) {
-			logger.info("Serve call moved / changed, not deleting SEFF for: " + decl.name)
+			logger.info("Serve call moved / changed, not deleting SEFF for: " + declaration.name)
 			return
 		}
 		
 		
-		logger.info("ServeCall for declaration was removed: " + decl.name)
-		removeSeffForDeclaration(decl)
+		
+		
+		logger.info("ServeCall for declaration was removed: " + declaration.name)
+		removeSeffForDeclaration(declaration)
+
+		//if (servedDeclaration.empty) {
+		//	return
+		//}
+		//val decl = servedDeclaration.get
+		//var otherServeCall = ActionReconstruction.getServeCallForDeclaration(decl)
+		//if (otherServeCall !== null) {
+		//	logger.info("Serve call moved / changed, not deleting SEFF for: " + decl.name)
+		//	return
+		//}
+		
+		
+		//logger.info("ServeCall for declaration was removed: " + decl.name)
+		//removeSeffForDeclaration(decl)
+
+		
 	}
 }
+
+
+
+
+
+
 
 routine createRDBehaviourForBlock(lua::Block block) {
 	match {
 		val rdBehaviour = retrieve optional pcm::ResourceDemandingBehaviour corresponding to block
 		val basicComponent = retrieve optional pcm::BasicComponent corresponding to LuaUtil.getComponent(block)
-		val operationSignature = retrieve optional pcm::OperationSignature corresponding to LuaUtil.
-			getDeclaration(block)
-		val parentAction = retrieve optional pcm::AbstractAction corresponding to EcoreUtil2.
-			getContainerOfType(block, Statement)
+		//val operationSignature = retrieve optional pcm::OperationSignature corresponding to LuaUtil.getDeclaration(block)
+		val operationSignature = retrieve optional pcm::OperationSignature corresponding to LuaPcmUpdateUtil.getParentFunctiondeclarationAsEObject(block)	
+		// TODO: jsaenz: not sure if this works as intended with the new Lua CM
+		val parentAction = retrieve optional pcm::AbstractAction corresponding to EcoreUtil2.getContainerOfType(block, Stat)
 	}
 	update {
 		if (!ActionReconstruction.needsActionReconstruction(block)) {
@@ -305,10 +557,11 @@ routine createRDBehaviourForBlock(lua::Block block) {
 			return
 		}
 
-		val parentStatement = EcoreUtil2.getContainerOfType(block, Statement)
+		val parentStatement = EcoreUtil2.getContainerOfType(block, Stat)
 		logger.debug(String.format("%s (%s): Needs SEFF reconstruction", block, parentStatement.class.name))
 
-		if (parentStatement instanceof Statement_Function_Declaration) {
+		val functionDeclaration = LuaPcmUpdateUtil.buildFunctionDeclaration(parentStatement);
+		if (functionDeclaration !== null) {
 			if (!basicComponent.present) {
 				logger.warn("Component of Block has no corresponding basic component")
 				return
@@ -319,11 +572,13 @@ routine createRDBehaviourForBlock(lua::Block block) {
 			}
 
 			// add correspondence to the serve call
-			var serveCall = ActionReconstruction.getServeCallForDeclaration(parentStatement)
-			parentStatement.addCorrespondenceBetween(serveCall)
+			//var serveCall = ActionReconstruction.getServeCallForDeclaration(parentStatement)
+			//parentStatement.addCorrespondenceBetween(serveCall)
+			var functionCall = ActionReconstruction.getServeCallForDeclaration(functionDeclaration)
+			parentStatement.addCorrespondenceBetween(functionCall.getCallingFeature())
 
 			// create the RDSEFF for the block
-			createRDSeff(block, parentStatement, basicComponent.get, operationSignature.get)
+			createRDSeff(block, basicComponent.get, operationSignature.get, functionDeclaration)
 
 		} else {
 			if (!parentAction.present) {
@@ -351,7 +606,15 @@ routine removeRDBehaviourForBlock(lua::Block block) {
 	}
 }
 
-routine createRDSeff(lua::Block block, lua::Statement_Function_Declaration declaration, pcm::BasicComponent basicComponent, pcm::OperationSignature operationSignature) {
+/**
+ * Assumes that the given declaration is not null.
+ */
+//routine createRDSeff(lua::Block block, lua::Statement_Function_Declaration declaration, pcm::BasicComponent basicComponent, pcm::OperationSignature operationSignature) {
+routine createRDSeff(lua::Block block, 
+					 pcm::BasicComponent basicComponent, 
+					 pcm::OperationSignature operationSignature,
+					 plain LuaFunctionDeclaration as declaration
+	) {
 	match {
 		require absence of pcm::ResourceDemandingBehaviour corresponding to block
 	}
@@ -365,7 +628,7 @@ routine createRDSeff(lua::Block block, lua::Statement_Function_Declaration decla
 
 		initializeRDBehaviour(rdSeff, ActionUtil.getBlockName(block))
 		addCorrespondenceBetween(rdSeff, block)
-		addCorrespondenceBetween(rdSeff, declaration)
+		addCorrespondenceBetween(rdSeff, declaration.getRoot())
 		basicComponent.serviceEffectSpecifications__BasicComponent += rdSeff
 	}
 }
@@ -407,9 +670,22 @@ routine createBranchTransitionForBranchAction(pcm::BranchAction branchAction, pc
 		logger.debug("Adding Branch to parent branch action")
 		branchTransition.setBranchBehaviour_BranchTransition(rdBehaviour)
 
+		// comment jsaenz: I'm no sure what the following comment means, but it seems that this determines if the block is the block following the "then" of a IfThenElse or ElseIf
 		// the conditional branches are all block wrappers, so we can use this to determine
 		// if the added block is an else block
-		val isElseBranch = !block.eContainmentFeature.equals(LuaPackage.Literals.BLOCK_WRAPPER__BLOCK)
+		//val isElseBranch = !block.eContainmentFeature.equals(LuaPackage.Literals.BLOCK_WRAPPER__BLOCK)
+		//if (Config.descriptiveNames) {
+	//		if (isElseBranch) {
+//				branchTransition.entityName = "ELSE_BRANCH"
+//			} else {
+//				branchTransition.entityName = "CONDITIONAL_BRANCH"
+//			}
+//		}
+
+		// comment jsaenz: this should do the same as the above
+		//val isElseBranch = !(block.eContainmentFeature.equals(LuaPackage.Literals.IF_THEN_ELSE__THEN_BLOCK)
+		//					|| block.eContainer instanceof ElseIf)
+		val isElseBranch = block.eContainmentFeature.equals(LuaPackage.Literals.IF_THEN_ELSE__ELSE_BLOCK)
 		if (Config.descriptiveNames) {
 			if (isElseBranch) {
 				branchTransition.entityName = "ELSE_BRANCH"
@@ -491,7 +767,7 @@ routine initializeRDBehaviour(pcm::ResourceDemandingBehaviour rdBehaviour, Strin
 	}
 }
 
-routine createBasicComponentForLuaComponent(lua::Component luaComponent) {
+routine createBasicComponentForLuaComponent(ce::Component luaComponent) {
 	match {
 		require absence of pcm::BasicComponent corresponding to luaComponent
 		val pcmRepository = retrieve pcm::Repository corresponding to RepositoryPackage.Literals.REPOSITORY
@@ -506,7 +782,7 @@ routine createBasicComponentForLuaComponent(lua::Component luaComponent) {
 	}
 }
 
-routine removeBasicComponentForLuaComponent(lua::Component luaComponent) {
+routine removeBasicComponentForLuaComponent(ce::Component luaComponent) {
 	match {
 		val pcmBasicComponent = retrieve pcm::BasicComponent corresponding to luaComponent
 		val pcmRepository = retrieve pcm::Repository corresponding to RepositoryPackage.Literals.REPOSITORY
@@ -518,7 +794,7 @@ routine removeBasicComponentForLuaComponent(lua::Component luaComponent) {
 	}
 }
 
-routine createOperationInterfaceForLuaComponent(lua::Component luaComponent) {
+routine createOperationInterfaceForLuaComponent(ce::Component luaComponent) {
 	match {
 		require absence of pcm::OperationInterface corresponding to luaComponent
 		val pcmComponent = retrieve pcm::BasicComponent corresponding to luaComponent
@@ -539,7 +815,7 @@ routine createOperationInterfaceForLuaComponent(lua::Component luaComponent) {
 	}
 }
 
-routine removeOperationInterfaceForLuaComponent(lua::Component luaComponent) {
+routine removeOperationInterfaceForLuaComponent(ce::Component luaComponent) {
 	match {
 		val operationInterface = retrieve pcm::OperationInterface corresponding to luaComponent
 		val pcmRepository = retrieve pcm::Repository corresponding to RepositoryPackage.Literals.REPOSITORY
@@ -551,7 +827,7 @@ routine removeOperationInterfaceForLuaComponent(lua::Component luaComponent) {
 	}
 }
 
-routine createOperationProvidedRoleForLuaComponent(lua::Component luaComponent) {
+routine createOperationProvidedRoleForLuaComponent(ce::Component luaComponent) {
 	match {
 		require absence of pcm::OperationProvidedRole corresponding to luaComponent
 		val basicComponent = retrieve pcm::BasicComponent corresponding to luaComponent
@@ -574,7 +850,7 @@ routine createOperationProvidedRoleForLuaComponent(lua::Component luaComponent) 
 	}
 }
 
-routine removeOperationProvidedRoleForLuaComponent(lua::Component luaComponent) {
+routine removeOperationProvidedRoleForLuaComponent(ce::Component luaComponent) {
 	match {
 		val operationProvidedRole = retrieve pcm::OperationProvidedRole corresponding to luaComponent
 		val basicComponent = retrieve pcm::BasicComponent corresponding to luaComponent
@@ -586,12 +862,13 @@ routine removeOperationProvidedRoleForLuaComponent(lua::Component luaComponent) 
 	}
 }
 
-routine createParameter(lua::Referenceable functionParameter, lua::Statement_Function_Declaration functionDeclaration) {
+routine createParameter(lua::Referenceable functionParameter, plain LuaFunctionDeclaration as functionDeclaration) {
+//routine createParameter(lua::Referenceable functionParameter, lua::Statement_Function_Declaration functionDeclaration) {
 	match {
 		require absence of pcm::Parameter corresponding to functionParameter
 		val pcmRepository = retrieve pcm::Repository corresponding to RepositoryPackage.Literals.REPOSITORY
 		val luaAnyType = retrieve pcm::DataType corresponding to RepositoryPackage.Literals.REPOSITORY
-		val operationSignature = retrieve pcm::OperationSignature corresponding to functionDeclaration
+		val operationSignature = retrieve pcm::OperationSignature corresponding to functionDeclaration.getRoot
 	}
 	create {
 		val pcmParameter = new pcm::Parameter
@@ -602,7 +879,8 @@ routine createParameter(lua::Referenceable functionParameter, lua::Statement_Fun
 
 		addCorrespondenceBetween(functionParameter, pcmParameter)
 		
-		var argIndex = functionDeclaration.function.arguments.indexOf(functionParameter)
+		// we assume that the functionDeclaration has args if this createParameter function was called
+		var argIndex = functionDeclaration.getArgs.indexOf(functionParameter)
 		if (argIndex < operationSignature.parameters__OperationSignature.size) {
 			operationSignature.parameters__OperationSignature.add(argIndex, pcmParameter)
 		} else {
@@ -623,6 +901,9 @@ routine deleteParameter(lua::Referenceable functionParameter) {
 	}
 }
 
+/**
+ * We use EObject instead of Stat for the statement parameter, since it may be of type Stat or LastStat
+ */
 routine createActionsForStatement(EObject statement, lua::Block block) {
 	match {
 		val existingActions = retrieve many pcm::AbstractAction corresponding to statement
@@ -731,20 +1012,21 @@ routine createActionsForStatement(EObject statement, lua::Block block) {
 routine splitFusedActionAtStatement(pcm::AbstractAction actionToSplit, EObject statement, lua::Block block) {
 	match {
 		val rdBehaviour = retrieve pcm::ResourceDemandingBehaviour corresponding to block
-		val actionStatements = retrieve many lua::Statement corresponding to actionToSplit
-		val lastStatements = retrieve many lua::LastStatement corresponding to actionToSplit
+		val actionStatements = retrieve many lua::Stat corresponding to actionToSplit
+		// comment jsaenz: lastStatments does not seem to be used
+		val lastStatements = retrieve many lua::LastStat corresponding to actionToSplit
 	}
 	update {
 		logger.info("Splitting a fused action")
 		
 		// split the action using the index of the given statement
-		var splitIndex = block.statements.indexOf(statement)
+		var splitIndex = block.stats.indexOf(statement)
 		
 		var secondAction = SeffFactory.eINSTANCE.createInternalAction()
 
 		// transfer correspondences to the second action where needed
 		for (actionStatement  : actionStatements) {
-			var statementIndex = block.statements.indexOf(actionStatement)
+			var statementIndex = block.stats.indexOf(actionStatement)
 			if (statementIndex > splitIndex) {
 				logger.debug("Moving statement to second action of split")
 				removeCorrespondenceBetween(actionToSplit, actionStatement)
@@ -767,7 +1049,7 @@ routine splitFusedActionAtStatement(pcm::AbstractAction actionToSplit, EObject s
 
 routine fuseTwoInternalActions(pcm::InternalAction a, pcm::InternalAction b) {
 	match {
-		val statementsCorrespondingToB = retrieve many lua::Statement corresponding to b
+		val statementsCorrespondingToB = retrieve many lua::Stat corresponding to b
 	}
 	update {
 		logger.debug("Fusing two internal actions")
@@ -787,7 +1069,7 @@ routine fuseTwoInternalActions(pcm::InternalAction a, pcm::InternalAction b) {
 
 		if (Config.descriptiveNames) {
 			var newStatementCount = CorrespondenceUtil.getCorrespondingEObjectsByType(correspondenceModel, a,
-				Statement).size()
+				Stat).size()
 			a.entityName = String.format("Internal: %d statements", newStatementCount)
 		}
 	}
@@ -810,6 +1092,9 @@ routine actionStatementRelationChanged(pcm::AbstractAction action) {
 	}
 }
 
+/**
+ * We use EObject instead of Stat for the statement parameter, since it may be of type Stat or LastStat
+ */
 routine removeActionsForStatement(EObject statement, lua::Block block) {
 	match {
 		val statementActions = retrieve many pcm::AbstractAction corresponding to statement
@@ -825,7 +1110,7 @@ routine removeActionsForStatement(EObject statement, lua::Block block) {
 	}
 }
 
-routine replaceActionsForStatement(lua::Statement statement, lua::Block block, EObject change) {
+routine replaceActionsForStatement(lua::Stat statement, lua::Block block, EObject change) {
 	match {
 		val statementActions = retrieve many pcm::AbstractAction corresponding to statement
 		val rdBehaviour = retrieve optional pcm::ResourceDemandingBehaviour corresponding to block
@@ -849,7 +1134,7 @@ routine replaceActionsForStatement(lua::Statement statement, lua::Block block, E
 
 routine recreateActionsForCorrespondingStatements(pcm::AbstractAction action) {
 	match {
-		val statements = retrieve many lua::Statement corresponding to action
+		val statements = retrieve many lua::Stat corresponding to action
 	}
 	update {
 		for (statement : statements) {
@@ -865,7 +1150,7 @@ routine recreateActionsForCorrespondingStatements(pcm::AbstractAction action) {
 
 routine tryDeleteAction(pcm::AbstractAction action, pcm::ResourceDemandingBehaviour rdBehaviour) {
 	match {
-		val statementsOfAction = retrieve many lua::Statement corresponding to action
+		val statementsOfAction = retrieve many lua::Stat corresponding to action
 		val requiredRolesOfAction = retrieve many pcm::OperationRequiredRole corresponding to action
 	}
 	update {
@@ -916,9 +1201,9 @@ routine removeAction(pcm::AbstractAction action, pcm::ResourceDemandingBehaviour
 	}
 }
 
-routine createRequiredRoleForExternalCallAction(pcm::ExternalCallAction action, pcm::ResourceDemandingBehaviour rdseff, lua::Component callingComponent) {
+routine createRequiredRoleForExternalCallAction(pcm::ExternalCallAction action, pcm::ResourceDemandingBehaviour rdseff, ce::Component callingComponent) {
 	match {
-		val calledComponent = retrieve optional lua::Component corresponding to action
+		val calledComponent = retrieve optional ce::Component corresponding to action
 	}
 	update {
 		if (calledComponent.empty) {
@@ -930,7 +1215,7 @@ routine createRequiredRoleForExternalCallAction(pcm::ExternalCallAction action, 
 	}
 }
 
-routine findOrCreateOperationRequiredRole(pcm::ExternalCallAction action, lua::Component callingComponent, lua::Component calledComponent) {
+routine findOrCreateOperationRequiredRole(pcm::ExternalCallAction action, ce::Component callingComponent, ce::Component calledComponent) {
 	match {
 		val existingRole = retrieve optional pcm::OperationRequiredRole corresponding to action
 		val requiredInterface = retrieve optional pcm::OperationInterface corresponding to calledComponent
@@ -1016,11 +1301,11 @@ routine removeRequiredRoleForExternalCallAction(pcm::ExternalCallAction action) 
 }
 
 
-routine createOperationSignatureForStatementFunctionDeclaration(lua::Statement_Function_Declaration functionDeclaration) {
+routine createOperationSignatureForStatementFunctionDeclaration(plain LuaFunctionDeclaration as functionDeclaration) {
 	match {
 		val operationInterface = retrieve pcm::OperationInterface corresponding to LuaUtil.getComponent(
 			functionDeclaration)
-		require absence of pcm::OperationSignature corresponding to functionDeclaration
+		require absence of pcm::OperationSignature corresponding to functionDeclaration.getRoot
 		val luaAnyType = retrieve pcm::DataType corresponding to RepositoryPackage.Literals.REPOSITORY
 	}
 	create {
@@ -1033,10 +1318,9 @@ routine createOperationSignatureForStatementFunctionDeclaration(lua::Statement_F
 		operationSignature.interface__OperationSignature = operationInterface
 		operationInterface.signatures__OperationInterface += operationSignature
 		
-		val rootBlock = functionDeclaration.function.block
+		val rootBlock = functionDeclaration.getBlock
 		if (rootBlock !== null) {
-			val returnValue = rootBlock.returnValue
-			if (returnValue !== null) {
+			if (LuaPcmUpdateUtil.hasReturnValues(rootBlock)) {
 				operationSignature.returnType__OperationSignature = luaAnyType
 			}
 
@@ -1046,11 +1330,11 @@ routine createOperationSignatureForStatementFunctionDeclaration(lua::Statement_F
 		}
 
 
-		addCorrespondenceBetween(functionDeclaration, operationSignature)
+		addCorrespondenceBetween(functionDeclaration.getRoot, operationSignature)
 
 		// some external call actions may be created before this signature is created, so we fix the ExternalCallAction
 		// set signature in external call actions which are calling this declaration
-		ComponentSetInfoRegistry.getInfosForComponentSet(functionDeclaration).declarationToCallingActions.get(
+		ComponentSetInfoRegistry.getInfosForComponentSet(functionDeclaration.getRoot).declarationToCallingActions.get(
 			functionDeclaration).forEach [
 			if (it instanceof ExternalCallAction) {
 				logger.warn(functionDeclaration.name + ": ExternalCallAction for newly created signature exists")
@@ -1079,21 +1363,29 @@ routine makeSureRootBlockUsesSig(lua::Block block, pcm::OperationSignature sig) 
 	}
 }
 
-routine removeOperationSignatureForStatementFunctionDeclaration(lua::Statement_Function_Declaration functionDeclaration) {
+//routine removeOperationSignatureForStatementFunctionDeclaration(lua::Statement_Function_Declaration functionDeclaration) {
+routine removeOperationSignatureForStatementFunctionDeclaration(plain LuaFunctionDeclaration as declaration) {
 	match {
-		val operationSignature = retrieve pcm::OperationSignature corresponding to functionDeclaration
+		val operationSignature = retrieve pcm::OperationSignature corresponding to declaration.getRoot()
 	}
 	update {
-		logger.info(functionDeclaration.name + ": Removing signature")
-		if (functionDeclaration.function !== null) {
-			for (param : functionDeclaration.function.arguments) {
-				deleteParameter(param)
+		logger.info(declaration.name + ": Removing signature")
+		//if (declaration.function !== null) {
+		//	for (param : functionDeclaration.function.arguments) {
+		//		deleteParameter(param)
+		//	}
+		//}
+		
+		val args = declaration.args
+		if (args !== null) {
+			for (arg : args) {
+				deleteParameter(arg)
 			}
 		}
 		
 		fixExternalCallsOfSoonToBeDeletedSignature(operationSignature)								
 
-		removeCorrespondenceBetween(operationSignature, functionDeclaration)
+		removeCorrespondenceBetween(operationSignature, declaration.getRoot())
 		removeObject(operationSignature)
 	}
 }
@@ -1110,10 +1402,11 @@ routine fixExternalCallsOfSoonToBeDeletedSignature(pcm::OperationSignature sig) 
 	}
 }
 
-routine createSeffForDeclaration(lua::Statement_Function_Declaration declaration) {
+//routine createSeffForDeclaration(lua::Statement_Function_Declaration declaration) {
+routine createSeffForDeclaration(plain LuaFunctionDeclaration as declaration) {
 	match {
-		val rdSeff = retrieve optional pcm::ResourceDemandingSEFF corresponding to declaration
-		val operationSignature = retrieve optional pcm::OperationSignature corresponding to declaration
+		val rdSeff = retrieve optional pcm::ResourceDemandingSEFF corresponding to declaration.getRoot()
+		val operationSignature = retrieve optional pcm::OperationSignature corresponding to declaration.getRoot()
 	}
 	update {
 		if (rdSeff.present) {
@@ -1128,19 +1421,20 @@ routine createSeffForDeclaration(lua::Statement_Function_Declaration declaration
 		}
 
 		// create RD behaviours for all blocks
-		for (block : EcoreUtil2.getAllContentsOfType(declaration, Block)) {
+		for (block : EcoreUtil2.getAllContentsOfType(declaration.getRoot(), Block)) {
 			createRDBehaviourForBlock(block)
 
-			for (statement : block.statements) {
+			for (statement : block.stats) {
 				createActionsForStatement(statement, block)
 			}
 		}
 	}
 }
 
-routine removeSeffForDeclaration(LuaFunctionDeclaration declaration) {
+//routine removeSeffForDeclaration(lua::Statement_Function_Declaration declaration) {
+routine removeSeffForDeclaration(plain LuaFunctionDeclaration as declaration) {
 	match {
-		val rdSeff = retrieve optional pcm::ResourceDemandingSEFF corresponding to declaration
+		val rdSeff = retrieve optional pcm::ResourceDemandingSEFF corresponding to declaration.getRoot()
 	}
 	update {
 		if (!rdSeff.present) {
@@ -1152,10 +1446,10 @@ routine removeSeffForDeclaration(LuaFunctionDeclaration declaration) {
 		removeOperationSignatureForStatementFunctionDeclaration(declaration)
 
 		// remove all the RD behaviours and actions
-		for (block : EcoreUtil2.getAllContentsOfType(declaration, Block)) {
+		for (block : EcoreUtil2.getAllContentsOfType(declaration.getRoot(), Block)) {
 			removeRDBehaviourForBlock(block)
 
-			for (statement : block.statements) {
+			for (statement : block.stats) {
 				removeActionsForStatement(statement, block)
 			}
 		}

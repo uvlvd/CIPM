@@ -5,6 +5,11 @@ import org.apache.log4j.Logger;
 public class SeffHelper {
     private static final Logger LOGGER = Logger.getLogger(SeffHelper.class.getName());
 
+    /**
+     * This tests for null, i.e. returns false if the given functionDeclaration is null.
+     * @param functionDeclaration
+     * @return
+     */
     public static boolean needsSeffReconstruction(LuaFunctionDeclaration functionDeclaration) {
         if (functionDeclaration == null) {
             return false;

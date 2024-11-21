@@ -46,7 +46,7 @@ public class LuaFunctionCall {
 	}
 
 	/**
-	 * Returns the called function, or null if the reference to the called function is mocked.
+	 * Returns the called function, or null if the reference to the called function {@link #isMocked()}.
 	 */
 	public LuaFunctionDeclaration getCalledFunction() {
 		return calledFunction;
@@ -57,7 +57,7 @@ public class LuaFunctionCall {
 	}
 
 	/**
-	 * Returns true if the reference to the called function is mocked. Only then {@link getCalledFunction()} returns null.
+	 * Returns true if the reference to the called function is mocked, i.e. {@link #getCalledFunction()} returns null.
 	 */
 	public boolean isMocked() {
 		return isMocked;
@@ -88,7 +88,7 @@ public class LuaFunctionCall {
 		return !isExternal();
 	}
 
-	public static LuaFunctionCall from(final FunctionCallStat functionCallStat) {
+	public static LuaFunctionCall of(final FunctionCallStat functionCallStat) {
 		var result = new LuaFunctionCall();
 		
 		final var featureRoot = (Feature) functionCallStat.getPrefix();
@@ -105,7 +105,7 @@ public class LuaFunctionCall {
 		return result;
 	}
 	
-	public static LuaFunctionCall from(final FunctionCall functionCall) {
+	public static LuaFunctionCall of(final FunctionCall functionCall) {
 		var result = new LuaFunctionCall();
 		
 		var parent = EcoreUtil2.getContainerOfType(functionCall, Feature.class);
@@ -124,7 +124,7 @@ public class LuaFunctionCall {
 		return result;
 	}
 	
-	public static LuaFunctionCall from(final MethodCall methodCall) {
+	public static LuaFunctionCall of(final MethodCall methodCall) {
 		var result = new LuaFunctionCall();
 		
 		result.initFromNamedFeature(methodCall, methodCall);
@@ -169,36 +169,9 @@ public class LuaFunctionCall {
 	
 	private LuaFunctionDeclaration getCalledFunction(NamedFeature named) {
 		var ref = named.getRef();
-		return getCalledFunction(ref, 0, 1000);
+		return LuaUtil.getReferencedFunction(ref, 0, 1000);
 	}
 	
-	private LuaFunctionDeclaration getCalledFunction(Referenceable ref, int currDepth, final int maxDepth) {
-		if (currDepth > maxDepth) {
-			throw new RuntimeException("Reached max depth while attempting to get called function value from " + ref);
-		}
-		
-		if (ref instanceof FunctionDeclaration decl) {
-			return LuaFunctionDeclaration.from(decl);
-		}
-
-		if (ref instanceof LocalFunctionDeclaration decl) {
-			return LuaFunctionDeclaration.from(decl);
-		}
-		
-		if (ref instanceof ExpFunctionDeclaration decl) {
-			return LuaFunctionDeclaration.from(decl);
-		}
-		
-		if (LuaUtil.isMocked(ref)) {
-			return null;
-		}
-		
-		if (ref instanceof Referencing referencing) {
-			return getCalledFunction(referencing.getRef(), ++currDepth, maxDepth);
-		}
-		
-		throw new RuntimeException("Could not find called function!");
-	}
 	
 
 }

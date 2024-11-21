@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
 import org.xtext.lua.component_extension.Component;
@@ -21,6 +22,7 @@ import org.xtext.lua.lua.LocalFunctionDeclaration;
 import org.xtext.lua.lua.MethodCall;
 import org.xtext.lua.lua.NumericFor;
 import org.xtext.lua.lua.Referenceable;
+import org.xtext.lua.lua.Referencing;
 import org.xtext.lua.lua.RepeatLoop;
 import org.xtext.lua.lua.Stat;
 import org.xtext.lua.lua.WhileLoop;
@@ -135,19 +137,19 @@ public class LuaUtil {
     	var result = new ArrayList<LuaFunctionCall>();
     	// handle function call statements
     	if (stat instanceof FunctionCallStat functionCallStat) {
-    		final var functionCall = LuaFunctionCall.from(functionCallStat);
+    		final var functionCall = LuaFunctionCall.of(functionCallStat);
     		if (functionCall != null) {
     			result.add(functionCall);
     		}
     	} else { // handle other statements containing function/method calls
 	    	EcoreUtil2.getAllContentsOfType(stat, FunctionCall.class)
 	    			.stream()
-	    			.map(LuaFunctionCall::from)
+	    			.map(LuaFunctionCall::of)
 	    			.filter(Objects::nonNull)
 	    			.forEach(result::add);
 	    	EcoreUtil2.getAllContentsOfType(stat, MethodCall.class)
 	    			.stream()
-					.map(LuaFunctionCall::from)
+					.map(LuaFunctionCall::of)
 					.filter(Objects::nonNull)
 					.forEach(result::add);
     	}
@@ -172,17 +174,17 @@ public class LuaUtil {
     	var result = new ArrayList<LuaFunctionCall>();
     	EcoreUtil2.getAllContentsOfType(root, FunctionCallStat.class)
     		.stream()
-    		.map(LuaFunctionCall::from)
+    		.map(LuaFunctionCall::of)
     		.filter(Objects::nonNull)
     		.forEach(result::add);
     	EcoreUtil2.getAllContentsOfType(root, FunctionCall.class)
 			.stream()
-			.map(LuaFunctionCall::from)
+			.map(LuaFunctionCall::of)
 			.filter(Objects::nonNull)
 			.forEach(result::add);
     	EcoreUtil2.getAllContentsOfType(root, MethodCall.class)
 			.stream()
-			.map(LuaFunctionCall::from)
+			.map(LuaFunctionCall::of)
 			.filter(Objects::nonNull)
 			.forEach(result::add);
     	return result;
@@ -194,21 +196,23 @@ public class LuaUtil {
     	var result = new ArrayList<LuaFunctionDeclaration>();
     	EcoreUtil2.getAllContentsOfType(root, FunctionDeclaration.class)
     		.stream()
-    		.map(LuaFunctionDeclaration::from)
+    		.map(LuaFunctionDeclaration::of)
     		.filter(Objects::nonNull)
     		.forEach(result::add);
     	EcoreUtil2.getAllContentsOfType(root, LocalFunctionDeclaration.class)
 			.stream()
-			.map(LuaFunctionDeclaration::from)
+			.map(LuaFunctionDeclaration::of)
 			.filter(Objects::nonNull)
 			.forEach(result::add);
     	EcoreUtil2.getAllContentsOfType(root, ExpFunctionDeclaration.class)
 			.stream()
-			.map(LuaFunctionDeclaration::from)
+			.map(LuaFunctionDeclaration::of)
 			.filter(Objects::nonNull)
 			.forEach(result::add);
     	return result;
     }
+    
+
     
     public static Block getBlockFromCalledFunction(LuaFunctionCall functionCall) {
     	if (functionCall.getCalledFunction() == null) {
@@ -217,6 +221,33 @@ public class LuaUtil {
     	return functionCall.getCalledFunction().getBlock();
     }
     
+	public static LuaFunctionDeclaration getReferencedFunction(Referenceable ref, int currDepth, final int maxDepth) {
+		if (currDepth > maxDepth) {
+			throw new RuntimeException("Reached max depth while attempting to get called function value from " + ref);
+		}
+		
+		if (ref instanceof FunctionDeclaration decl) {
+			return LuaFunctionDeclaration.of(decl);
+		}
+
+		if (ref instanceof LocalFunctionDeclaration decl) {
+			return LuaFunctionDeclaration.of(decl);
+		}
+		
+		if (ref instanceof ExpFunctionDeclaration decl) {
+			return LuaFunctionDeclaration.of(decl);
+		}
+		
+		if (LuaUtil.isMocked(ref)) {
+			return null;
+		}
+		
+		if (ref instanceof Referencing referencing) {
+			return getReferencedFunction(referencing.getRef(), ++currDepth, maxDepth);
+		}
+		
+		throw new RuntimeException("Could not find called function!");
+	}
 
     
 

@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
+import org.eclipse.xtext.EcoreUtil2;
 import org.palladiosimulator.pcm.core.CoreFactory;
 import org.palladiosimulator.pcm.repository.OperationSignature;
 import org.palladiosimulator.pcm.seff.AbstractAction;
@@ -182,7 +183,7 @@ public final class ActionReconstruction {
 //    }
     
     // TODO: may remove this comment
-    // comment juanj: previously called reconstructDirectFunctionCallToAction and called by reconstructFunctionCallToAction
+    // comment jsaenz: previously called reconstructDirectFunctionCallToAction and called by reconstructFunctionCallToAction
     /**
      * 
      * @param functionCall: the function call, non-mocked.
@@ -256,7 +257,7 @@ public final class ActionReconstruction {
      * 
      * TODO method does currently not work correctly
      * 
-     * juanj comment: this method was only adapted to the new Lua CM, not fixed functionally (I am not sure what "method does currently not work correctly" implies)
+     * jsaenz comment: this method was only adapted to the new Lua CM, not fixed functionally (I am not sure what "method does currently not work correctly" implies)
      */
     /**
      * 
@@ -367,22 +368,20 @@ public final class ActionReconstruction {
     }
     
     
-    
-    
-   
-    
-/*
-    public static Expression_Functioncall_Direct getServeCallForDeclaration(Statement_Function_Declaration eObj) {
-        if (eObj != null) {
-            var infos = ComponentSetInfoRegistry.getInfosForComponentSet(eObj);
+
+    //public static Expression_Functioncall_Direct getServeCallForDeclaration(Statement_Function_Declaration eObj) {
+    public static LuaFunctionCall getServeCallForDeclaration(LuaFunctionDeclaration declaration) {
+        if (declaration != null) {
+            var infos = ComponentSetInfoRegistry.getInfosForComponentSet(declaration.getRoot());
             if (infos != null) {
-                return infos.getServeCallForDeclaration(eObj);
+                return infos.getServeCallForDeclaration(declaration);
             }
         }
 
         return null;
     }
-*/
+
+
 
 
 

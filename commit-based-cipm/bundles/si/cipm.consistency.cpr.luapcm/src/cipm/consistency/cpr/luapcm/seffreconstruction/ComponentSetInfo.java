@@ -14,6 +14,7 @@ import org.xtext.lua.component_extension.Application;
 import org.xtext.lua.component_extension.Component;
 import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.FuncBody;
+import org.xtext.lua.lua.FunctionDeclaration;
 import org.xtext.lua.lua.IfThenElse;
 import org.xtext.lua.lua.Stat;
 
@@ -30,7 +31,7 @@ public class ComponentSetInfo {
 
     private static final Logger LOGGER = Logger.getLogger(ComponentSetInfo.class.getName());
 
-    //TODO: juanj comment: this seems to map some kind of function name encoded in the last argument
+    //TODO: jsaenz comment: this seems to map some kind of function name encoded in the last argument
     // of the functionCall to that function call (?)
     //private Map<String, Expression_Functioncall_Direct> functionNameToServeCall;
     
@@ -80,7 +81,7 @@ public class ComponentSetInfo {
      * Creates and returns a map from function declarations to their external calls, 
      * i.e. calls from from outside the component containing the function declaration.
      */
-    //TODO: comment juanj: previously: private static Map<String, Expression_Functioncall_Direct> generateServedFunctionNames(EObject root) {
+    //TODO: comment jsaenz: previously: private static Map<String, Expression_Functioncall_Direct> generateServedFunctionNames(EObject root) {
     private Map<LuaFunctionDeclaration, LuaFunctionCall> getFunctionToExternalFunctionCallMapFor(EObject root) {
     	Map<LuaFunctionDeclaration, LuaFunctionCall> result = new HashMap<>();
     	
@@ -137,10 +138,9 @@ public class ComponentSetInfo {
      * @return boolean
      */
     public boolean needsSeffReconstruction(LuaFunctionDeclaration functionDeclaration) {
-    	// TODO: this needs to be changed to return true for all function declarations that are globally accessible,
-    	// i.e. global function declarations or local function declarations or expressions that are returned from the
-    	// lua file
-        return functionToExternalFunctionCall.containsKey(functionDeclaration);
+    	return functionDeclaration.isGlobal();
+    	// TODO: remove this:
+        //return functionToExternalFunctionCall.containsKey(functionDeclaration);
     }
 
     /**

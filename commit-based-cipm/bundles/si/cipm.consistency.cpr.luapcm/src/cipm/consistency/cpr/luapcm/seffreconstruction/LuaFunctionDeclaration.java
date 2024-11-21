@@ -2,17 +2,22 @@ package cipm.consistency.cpr.luapcm.seffreconstruction;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import org.eclipse.xtext.EcoreUtil2;
 
 import org.xtext.lua.lua.Arg;
 import org.xtext.lua.lua.Block;
+import org.xtext.lua.lua.Chunk;
 import org.xtext.lua.lua.ExpFunctionDeclaration;
 import org.xtext.lua.lua.FunctionDeclaration;
 import org.xtext.lua.lua.LocalFunctionDeclaration;
 import org.xtext.lua.lua.ParList;
 import org.xtext.lua.lua.Referenceable;
+import org.xtext.lua.lua.Return;
 import org.xtext.lua.lua.Stat;
+import org.xtext.lua.scoping.LuaQualifiedNameProvider;
+import org.xtext.lua.utils.LinkingAndScopingUtils;
 
 public class LuaFunctionDeclaration {
 	
@@ -31,6 +36,8 @@ public class LuaFunctionDeclaration {
 	private Referenceable root;
 	private Stat containingStat;
 	
+	private Boolean isGlobal = null;
+	
 	private LuaFunctionDeclaration() { }
 
 	public List<Arg> getArgs() {
@@ -42,7 +49,8 @@ public class LuaFunctionDeclaration {
 	}
 
 	/**
-	 * Returns the Referenceable corresponding to this LuaFunctionDeclaration from the CM.
+	 * Returns the Referenceable corresponding to this LuaFunctionDeclaration from the CM, might be {@link FunctionDeclaration}, {@link LocalFunctionDeclaration},
+	 * or {@link ExpFunctionDeclaration}.
 	 */
 	public Referenceable getRoot() {
 		return root;
@@ -63,8 +71,47 @@ public class LuaFunctionDeclaration {
 	public Stat getContainingStat() {
 		return containingStat;
 	}
+	
+	// TODO: this needs to be tested
+	public boolean isGlobal() {
+		if (isGlobal == null) {
+			if (root instanceof FunctionDeclaration) {
+				isGlobal = true;
+			}
+			
+			var containingChunk = EcoreUtil2.getContainerOfType(root, Chunk.class);
+			if (containingChunk != null) {
+				var isReturnedByChunk = getReferenceablesFromReturnStat(containingChunk)
+						.stream()
+						.map(ref -> LuaUtil.getReferencedFunction(ref, 0, 1000))
+						.filter(Objects::nonNull)
+						.anyMatch(fd -> fd.getRoot().equals(root));
+				isGlobal = isReturnedByChunk;
+			}
 
-	public static LuaFunctionDeclaration from(FunctionDeclaration decl) {
+		}
+		
+		// this should always be set to something other than null here, since
+		// any root object should have a containingChunk.
+		if (isGlobal == null) {
+			throw new RuntimeException("isGlobal should never be null!");
+		}
+		
+		return isGlobal;
+	}
+	
+	private List<Referenceable> getReferenceablesFromReturnStat(final Chunk chunk) {
+		var result = new ArrayList<Referenceable>();
+		final var lastStat = chunk.getBlock().getLastStat();
+		if (lastStat instanceof Return returnStat) {
+			// TODO: should avoid using LuaQualifiedNameProvider here
+			final var referenceables = LinkingAndScopingUtils.getReferenceablesFromReturnStat(returnStat, new LuaQualifiedNameProvider());
+			referenceables.stream().forEach(result::addAll);
+		}
+		return result;
+	}
+
+	public static LuaFunctionDeclaration of(FunctionDeclaration decl) {
 		var functionDeclaration = new LuaFunctionDeclaration();
 		
 		final var name = decl.getName();
@@ -75,7 +122,7 @@ public class LuaFunctionDeclaration {
 		return functionDeclaration;
 	}
 	
-	public static LuaFunctionDeclaration from(LocalFunctionDeclaration decl) {
+	public static LuaFunctionDeclaration of(LocalFunctionDeclaration decl) {
 		var functionDeclaration = new LuaFunctionDeclaration();
 		
 		final var name = decl.getName();
@@ -86,7 +133,7 @@ public class LuaFunctionDeclaration {
 		return functionDeclaration;
 	}
 	
-	public static LuaFunctionDeclaration from(ExpFunctionDeclaration decl) {
+	public static LuaFunctionDeclaration of(ExpFunctionDeclaration decl) {
 		var functionDeclaration = new LuaFunctionDeclaration();
 		
 		// name of ExpFunctionDeclaration might be null, e.g. for ExpFunctionDeclaration inside of ParamArgs
