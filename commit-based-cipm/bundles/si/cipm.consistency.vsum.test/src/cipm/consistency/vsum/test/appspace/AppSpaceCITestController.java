@@ -131,6 +131,7 @@ public abstract class AppSpaceCITestController extends AppSpaceCommitIntegration
     @BeforeAll
     public static void deleteDataBeforeRunningTests() {
         try {
+        	Files.createDirectories(TESTDATA_PATH); // create the test directory if it does not exist
             Files.walk(TESTDATA_PATH)
                 .sorted(Comparator.reverseOrder())
                 .forEach(path -> {

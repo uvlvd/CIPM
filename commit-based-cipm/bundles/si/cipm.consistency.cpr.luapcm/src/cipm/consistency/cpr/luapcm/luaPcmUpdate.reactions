@@ -439,7 +439,7 @@ reaction AddedMethodCall {
 //** Reactions for removed function calls **
 //******************************************
 // TODO: same redundancies as for adding function calls, adding/removing function declarations..
-
+// this can probably be removed because funcitonCalls do not need to affect the SEFFs
 reaction RemovedFunctionCallStat {
 	after element lua::FunctionCallStat deleted
 	call {
@@ -478,6 +478,15 @@ routine tryRemoveSeffForServeCall(plain LuaFunctionCall as potentialServeCall) {
 		val servedDeclaration = retrieve optional EObject corresponding to potentialServeCall.getCallingFeature()
 	}
 	update {
+		
+		
+		// this is probably intended to detect if a served call has been removed or 
+		// just moved inside a file
+		//    - the easiest approach may be to always remove and add declarations, since deciding
+		//      if a call/declaration was moved can be complex
+		//    - in the general Lua case changes in function calls should not affect the 
+		//      generation of SEFFs, just the LuaFunctionDeclaration.isGlobal
+		
 		
 		// TODO: not sure if this does the same as the previous impementation, see comments above this function 
 		// and commented code of previous implementation and above and below

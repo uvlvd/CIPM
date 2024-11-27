@@ -24,3 +24,6 @@
 [submodule "commit-based-cipm/bundles/Vitruv-Change"]
 	path = commit-based-cipm/bundles/Vitruv-Change
 	url = https://github.com/vitruv-tools/Vitruv-Change
+[submodule "commit-based-cipm/bundles/si/cipm.consistency.vsum.test/ciTestRepos/apisix"]
+	path = commit-based-cipm/bundles/si/cipm.consistency.vsum.test/ciTestRepos/apisix
+	url = https://github.com/apache/apisix.git
