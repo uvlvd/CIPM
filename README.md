@@ -42,6 +42,9 @@ You will need [Eclipse Modeling Tools 2022-09](https://www.eclipse.org/downloads
 9. Start second Eclipse instance: `Run -> Run Configurations -> Eclipse Application -> Launch Runtime Eclipse`
     - make sure "All workspace and enabled target Plug-ins" is selected in the Plug-ins tab
 10. In second instance, import all from `commit-based-cipm/bundles/fi`
+11. To avoid IDE errors for test data: For apisix test/eval in `cipm.consistency.vsum.test` (2nd Eclipse instance):
+   - select package/project `cimp.consistency.vsum.test`
+   - go to `project -> Properties -> Resource -> Resource Filters` and add an Exclude all filter, Applies to Folders, all children (recursive) with Name matches *apisix
 
 ##### Debugging second Eclipse instance (TODO: remove?)
  - add xtend-gen folder to cipm.consistency.vsum.test
