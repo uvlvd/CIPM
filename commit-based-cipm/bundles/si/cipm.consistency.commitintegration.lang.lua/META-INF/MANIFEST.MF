@@ -9,7 +9,7 @@ Export-Package: cipm.consistency.commitintegration.lang.lua,
  cipm.consistency.commitintegration.lang.lua.appspace,
  cipm.consistency.commitintegration.lang.lua.appspace.detection,
  cipm.consistency.commitintegration.lang.lua.changeresolution
-Import-Package: org.apache.commons.lang3;version="3.14.0"
+Import-Package: org.apache.commons.lang;version="2.6.0"
 Require-Bundle: tools.vitruv.change.composite,
  tools.vitruv.framework.vsum,
  org.eclipse.xtend.lib,

@@ -90,7 +90,7 @@ public class GitRepositoryWrapper {
 
     public GitRepositoryWrapper withLocalSubmodule(Path parentRepoGitDir, String submoduleName)
             throws InvalidRemoteException, TransportException, GitAPIException, IOException {
-        var parentGit = Git.open(parentRepoGitDir.toFile());
+    	var parentGit = Git.open(parentRepoGitDir.toFile());
         repository = SubmoduleWalk.getSubmoduleRepository(parentGit.getRepository(), submoduleName);
         git = new Git(repository);
         return this;
