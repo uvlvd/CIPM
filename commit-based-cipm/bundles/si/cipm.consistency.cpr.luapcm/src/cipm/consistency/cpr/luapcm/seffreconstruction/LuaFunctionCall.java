@@ -13,7 +13,7 @@ import org.xtext.lua.lua.MethodCall;
 import org.xtext.lua.lua.NamedFeature;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
-import org.xtext.lua.utils.LinkingAndScopingUtils;
+import org.xtext.lua.utils.FeatureUtil;
 
 public class LuaFunctionCall {
 	private static final Logger LOGGER = Logger.getLogger(LuaFunctionCall.class);
@@ -92,10 +92,10 @@ public class LuaFunctionCall {
 		var result = new LuaFunctionCall();
 		
 		final var featureRoot = (Feature) functionCallStat.getPrefix();
-		final var featurePathLeaf = LinkingAndScopingUtils.getFeaturePathLeaf(featureRoot);
-		final var featurePathNamedLeaf = LinkingAndScopingUtils.getFeaturePathNamedLeaf(featureRoot);
-		if (featurePathNamedLeaf instanceof NamedFeature namedLeaf) {
-			result.initFromNamedFeature(featurePathLeaf, namedLeaf);
+		final var featurePathLeaf = FeatureUtil.getFeaturePathLeaf(featureRoot);
+		final var featurePathNamedLeafOpt = FeatureUtil.findFeaturePathNamedLeaf(featureRoot);
+		if (featurePathNamedLeafOpt.isPresent()) {
+			result.initFromNamedFeature(featurePathLeaf, featurePathNamedLeafOpt.get());
 		}
 		
 		if (!result.validateConstruction()) {

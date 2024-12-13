@@ -16,7 +16,9 @@ You will need [Eclipse Modeling Tools 2022-09](https://www.eclipse.org/downloads
    - cd to `CIPM\CIPM-Pipeline\cipm.consistency.bridge.eclipse\cipm.consistency.base.shared\dep-generator/`
    - run `./gralew.bat bundle copyBundles`
 2. Clone the [Lua Code Model Repository](https://github.com/uvlvd/Metamodels/tree/refactoring) (checkout the `refactoring` branch) //TODO: should be the main branch
-3. In Eclipse, install Lombok from its [updatesite](https://projectlombok.org/p2)
+3. In Eclipse, 
+    - install Lombok from its [updatesite](https://projectlombok.org/p2)
+    - Install Xtext from the marketplace (tested with version 2.37.0)
 4. In Eclipse, import projects: 
     - From the Lua Code Model Repository import all projects  (`org.xtext.lua*`)
     - From `commit-based-cipm\bundles\Vitruv-Change\bundles` import 
@@ -37,9 +39,8 @@ You will need [Eclipse Modeling Tools 2022-09](https://www.eclipse.org/downloads
 7. (Add `xtend-gen` folder to `tools.vitruv.change.composite` to avoid error)
     - this may not be necessary: during testing, adding the folder did not solve the issue (since no files were generated inside the `xtend-gen` folder). Installing Xtext and cleaning all projects solved the issue (see next step).
 8. Generate Lua model code:
-    - Install Xtext from the marketplace (tested with version 2.37.0)
     - `org.xtext.lua/src/org.xtext.lua/GenerateLua.mwe2 -> Right click -> Run as -> MWE2 Workflow`  (TODO: this needs Xtext to be installed?)
-9. Start second Eclipse instance: `Run -> Run Configurations -> Eclipse Application -> Launch Runtime Eclipse`
+9. Start second Eclipse instance: `Run -> Run Configurations -> New launch configuration`
     - make sure "All workspace and enabled target Plug-ins" is selected in the Plug-ins tab
 10. In second instance, import all from `commit-based-cipm/bundles/fi`
 11. To avoid IDE errors for test data: For apisix test/eval in `cipm.consistency.vsum.test` (2nd Eclipse instance):

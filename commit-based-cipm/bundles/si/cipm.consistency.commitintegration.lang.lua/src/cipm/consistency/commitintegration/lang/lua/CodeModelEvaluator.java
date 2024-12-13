@@ -10,7 +10,8 @@ import java.util.HashMap;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.xtext.lua.LuaParser;
-import org.xtext.lua.PreprocessingUtils;
+import org.xtext.lua.tests.PreprocessingUtils;
+//import org.xtext.lua.PreprocessingUtils;
 
 import cipm.consistency.tools.evaluation.data.CodeModelCorrectnessEval;
 import cipm.consistency.tools.evaluation.data.EvaluationDataContainer;

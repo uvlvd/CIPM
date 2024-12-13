@@ -17,7 +17,7 @@ import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Return;
 import org.xtext.lua.lua.Stat;
 import org.xtext.lua.scoping.LuaQualifiedNameProvider;
-import org.xtext.lua.utils.LinkingAndScopingUtils;
+import org.xtext.lua.utils.ReturnUtil;
 
 public class LuaFunctionDeclaration {
 	
@@ -105,7 +105,7 @@ public class LuaFunctionDeclaration {
 		final var lastStat = chunk.getBlock().getLastStat();
 		if (lastStat instanceof Return returnStat) {
 			// TODO: should avoid using LuaQualifiedNameProvider here
-			final var referenceables = LinkingAndScopingUtils.getReferenceablesFromReturnStat(returnStat, new LuaQualifiedNameProvider());
+			final var referenceables = ReturnUtil.getReferenceablesFromReturnStat(returnStat, new LuaQualifiedNameProvider());
 			referenceables.stream().forEach(result::addAll);
 		}
 		return result;
@@ -116,7 +116,7 @@ public class LuaFunctionDeclaration {
 		
 		final var name = decl.getName();
 		final var args = getArgsFromParList(decl.getBody().getParList());
-		final var block = decl.getBody().getFuncBlock();
+		final var block = decl.getBody().getBlock();
 		
 		functionDeclaration.init(decl, name, args, block, decl);
 		return functionDeclaration;
@@ -127,7 +127,7 @@ public class LuaFunctionDeclaration {
 		
 		final var name = decl.getName();
 		final var args = getArgsFromParList(decl.getBody().getParList());
-		final var block = decl.getBody().getFuncBlock();
+		final var block = decl.getBody().getBlock();
 		
 		functionDeclaration.init(decl, name, args, block, decl);
 		return functionDeclaration;
@@ -143,7 +143,7 @@ public class LuaFunctionDeclaration {
 			return null;
 		}
 		final var args = getArgsFromParList(decl.getBody().getParList());
-		final var block = decl.getBody().getFuncBlock();
+		final var block = decl.getBody().getBlock();
 		
 		functionDeclaration.init(decl, name, args, block, containingStat);
 		return functionDeclaration;

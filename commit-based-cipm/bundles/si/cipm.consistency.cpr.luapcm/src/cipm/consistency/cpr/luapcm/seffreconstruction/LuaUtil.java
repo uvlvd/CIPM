@@ -9,7 +9,6 @@ import java.util.Optional;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
 import org.xtext.lua.component_extension.Component;
-import org.xtext.lua.linking.SyntheticVar;
 import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.ElseIf;
 import org.xtext.lua.lua.ExpFunctionDeclaration;
@@ -26,6 +25,7 @@ import org.xtext.lua.lua.Referencing;
 import org.xtext.lua.lua.RepeatLoop;
 import org.xtext.lua.lua.Stat;
 import org.xtext.lua.lua.WhileLoop;
+import org.xtext.lua.mocking.SyntheticVar;
 
 public class LuaUtil {
 	

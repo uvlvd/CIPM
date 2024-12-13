@@ -1,13 +1,15 @@
 import cipm.consistency.base.models.instrumentation.InstrumentationModel.InstrumentationModelPackage
-import cipm.consistency.commitintegration.lang.lua.appspace.AppSpaceSemantics
 import cipm.consistency.cpr.luapcm.Config
+import cipm.consistency.cpr.luapcm.LuaPcmUpdateUtil
 import cipm.consistency.cpr.luapcm.seffreconstruction.ActionReconstruction
 import cipm.consistency.cpr.luapcm.seffreconstruction.ActionUtil
 import cipm.consistency.cpr.luapcm.seffreconstruction.BranchActionUtil
 import cipm.consistency.cpr.luapcm.seffreconstruction.ComponentSetInfoRegistry
 import cipm.consistency.cpr.luapcm.seffreconstruction.CorrespondenceUtil
-import cipm.consistency.cpr.luapcm.seffreconstruction.SeffHelper
+import cipm.consistency.cpr.luapcm.seffreconstruction.LuaFunctionCall
 import cipm.consistency.cpr.luapcm.seffreconstruction.LuaFunctionDeclaration
+import cipm.consistency.cpr.luapcm.seffreconstruction.LuaUtil
+import cipm.consistency.cpr.luapcm.seffreconstruction.SeffHelper
 import cipm.consistency.tools.evaluation.data.EvaluationDataContainer
 import org.eclipse.xtext.EcoreUtil2
 import org.palladiosimulator.pcm.repository.BasicComponent
@@ -19,21 +21,12 @@ import org.palladiosimulator.pcm.seff.InternalAction
 import org.palladiosimulator.pcm.seff.LoopAction
 import org.palladiosimulator.pcm.seff.ProbabilisticBranchTransition
 import org.palladiosimulator.pcm.seff.SeffFactory
-//import org.xtext.lua.lua.LuaUtil
 import org.xtext.lua.lua.Block
-//import org.xtext.lua.lua.LastStatement_Return_WithValue
 import org.xtext.lua.lua.LuaPackage
-import org.xtext.lua.lua.Stat
-import org.xtext.lua.component_extension.Component
-import org.xtext.lua.component_extension.Application
-import org.xtext.lua.component_extension.NamedChunk
-//import org.xtext.lua.lua.Statement_Function_Declaration
-import tools.vitruv.change.atomic.feature.FeatureEChange
-import cipm.consistency.cpr.luapcm.LuaPcmUpdateUtil
 import org.xtext.lua.lua.Return
-import cipm.consistency.cpr.luapcm.seffreconstruction.LuaUtil
-import org.xtext.lua.utils.LinkingAndScopingUtils
-import cipm.consistency.cpr.luapcm.seffreconstruction.LuaFunctionCall
+import org.xtext.lua.lua.Stat
+import org.xtext.lua.utils.StatUtil
+import tools.vitruv.change.atomic.feature.FeatureEChange
 
 import "http://www.example.org/component_extension" as ce
 import "http://www.xtext.org/lua/Lua" as lua
@@ -358,7 +351,7 @@ reaction ChangedStatement {
 		if (change instanceof FeatureEChange) {
 			val affected = change.affectedEObject
 			//val parentStatement = EcoreUtil2.getContainerOfType(affected, Statement)
-			val parentStatementOpt = LinkingAndScopingUtils.getParentStatement(affected);
+			val parentStatementOpt = StatUtil.getParentStatement(affected);
 			if (parentStatementOpt.isEmpty) {
 				return
 			}

@@ -185,7 +185,7 @@ public class ComponentSetInfo {
     	final var funcBodyOpt = findContainingFuncBody(eObj);
     	if (funcBodyOpt.isPresent()) {
     		final var funcBody = funcBodyOpt.get();
-    		final var funcBlock = funcBody.getFuncBlock();
+    		final var funcBlock = funcBody.getBlock();
     		
     		 if (blocksRequiringActionReconstruction.contains(funcBlock)) {
     			 return true;

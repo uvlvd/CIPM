@@ -36,6 +36,7 @@ public class ApisixCaseStudyTest extends AppSpaceCITestController {
 
     @Test
     public void runEvaluation() {
+    	System.out.println("Starting evaluation run...");
         doCompleteEvaluation(SINGLE_COMMIT);
     }
 }

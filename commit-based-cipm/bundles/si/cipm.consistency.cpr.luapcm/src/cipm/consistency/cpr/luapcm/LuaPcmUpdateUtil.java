@@ -100,7 +100,7 @@ public class LuaPcmUpdateUtil {
     }
     
     public static ExpFunctionDeclaration getExpFunctionDeclarationFromField(final Field field) {
-    	final var exp = LuaPcmUpdateUtil.getExpFromField(field);
+    	final var exp = field.getValueExp();
     	if (exp instanceof ExpFunctionDeclaration decl) {
     		return decl;
     	}
@@ -127,21 +127,5 @@ public class LuaPcmUpdateUtil {
     	}
     	return null;
     }
-    
-    private static Exp getExpFromField(final Field field) {
-    	if (field instanceof IndexExpField f) {
-    		return f.getValueExp();
-    	}
-    	if (field instanceof NameField f) {
-    		return f.getValueExp();
-    	}
-    	if (field instanceof ExpField f) {
-    		return f.getExp();
-    	}
-    	// should never happen
-    	return null;
-    }
-    
-    
 
 }
