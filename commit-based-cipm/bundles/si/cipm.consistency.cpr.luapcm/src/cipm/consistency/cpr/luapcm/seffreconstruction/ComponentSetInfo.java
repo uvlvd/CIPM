@@ -17,6 +17,9 @@ import org.xtext.lua.lua.FuncBody;
 import org.xtext.lua.lua.FunctionDeclaration;
 import org.xtext.lua.lua.IfThenElse;
 import org.xtext.lua.lua.Stat;
+import org.xtext.lua.utils.FunctionUtil;
+import org.xtext.lua.wrappers.LuaFunctionCall;
+import org.xtext.lua.wrappers.LuaFunctionDeclaration;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
@@ -85,7 +88,7 @@ public class ComponentSetInfo {
     private Map<LuaFunctionDeclaration, LuaFunctionCall> getFunctionToExternalFunctionCallMapFor(EObject root) {
     	Map<LuaFunctionDeclaration, LuaFunctionCall> result = new HashMap<>();
     	
-        final var functionCalls = LuaUtil.getExternalFunctionCallsContainedIn(root);
+        final var functionCalls = LuaFunctionCallUtil.getExternalFunctionCallsContainedIn(root);
         for (var functionCall : functionCalls) {
         	result.put(functionCall.getCalledFunction(), functionCall);	
         }
@@ -217,6 +220,9 @@ public class ComponentSetInfo {
     
     private Optional<FuncBody> findContainingFuncBody(final EObject eObj) {
     	final var funcBody = EcoreUtil2.getContainerOfType(eObj, FuncBody.class);
+    	if (funcBody == null) {
+    		return Optional.empty();
+    	}
     	return Optional.of(funcBody);
     }
 
@@ -236,7 +242,7 @@ public class ComponentSetInfo {
 //    }
 
     private void scanFunctionsForActionReconstruction(Application application) {
-        var functionDecls = LuaUtil.getAllFunctionDeclarationsContainedIn(application);
+        var functionDecls = FunctionUtil.getAllFunctionDeclarationsContainedIn(application);
         for (var functionDecl : functionDecls) {
             if (needsSeffReconstruction(functionDecl)) {
                 scanSeffFunctionForActionReconstruction(functionDecl);

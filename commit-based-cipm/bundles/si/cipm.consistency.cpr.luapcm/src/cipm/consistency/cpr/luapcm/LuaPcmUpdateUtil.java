@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
+import org.xtext.lua.lua.ArgList;
 import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.Exp;
 import org.xtext.lua.lua.ExpField;
@@ -17,10 +18,10 @@ import org.xtext.lua.lua.IndexExpField;
 import org.xtext.lua.lua.LocalFunctionDeclaration;
 import org.xtext.lua.lua.MethodCall;
 import org.xtext.lua.lua.NameField;
+import org.xtext.lua.lua.ParList;
 import org.xtext.lua.lua.Return;
-
-import cipm.consistency.cpr.luapcm.seffreconstruction.LuaFunctionCall;
-import cipm.consistency.cpr.luapcm.seffreconstruction.LuaFunctionDeclaration;
+import org.xtext.lua.wrappers.LuaFunctionCall;
+import org.xtext.lua.wrappers.LuaFunctionDeclaration;
 
 public class LuaPcmUpdateUtil {
     /**
@@ -36,6 +37,10 @@ public class LuaPcmUpdateUtil {
     }
     
     public static LuaFunctionDeclaration buildParentFunctionDeclarationOf(final EObject eObj) {
+    	// check that given eObj is argument in the parlist of a function declaration
+    	if (!isFunctionDeclarationArgument(eObj)) {
+    		return null;
+    	}
     	
     	EObject parent = EcoreUtil2.getContainerOfType(eObj, FunctionDeclaration.class);
     	if (parent != null) {
@@ -50,6 +55,10 @@ public class LuaPcmUpdateUtil {
     		return LuaFunctionDeclaration.of((ExpFunctionDeclaration) parent);
     	}
     	return null;
+    }
+    
+    public static boolean isFunctionDeclarationArgument(final EObject eObj) {
+    	return eObj.eContainer() instanceof ArgList argList && argList.eContainer() instanceof ParList;
     }
     
     /**

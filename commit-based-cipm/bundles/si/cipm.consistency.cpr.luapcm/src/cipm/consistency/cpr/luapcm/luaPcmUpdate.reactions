@@ -6,8 +6,6 @@ import cipm.consistency.cpr.luapcm.seffreconstruction.ActionUtil
 import cipm.consistency.cpr.luapcm.seffreconstruction.BranchActionUtil
 import cipm.consistency.cpr.luapcm.seffreconstruction.ComponentSetInfoRegistry
 import cipm.consistency.cpr.luapcm.seffreconstruction.CorrespondenceUtil
-import cipm.consistency.cpr.luapcm.seffreconstruction.LuaFunctionCall
-import cipm.consistency.cpr.luapcm.seffreconstruction.LuaFunctionDeclaration
 import cipm.consistency.cpr.luapcm.seffreconstruction.LuaUtil
 import cipm.consistency.cpr.luapcm.seffreconstruction.SeffHelper
 import cipm.consistency.tools.evaluation.data.EvaluationDataContainer
@@ -26,7 +24,11 @@ import org.xtext.lua.lua.LuaPackage
 import org.xtext.lua.lua.Return
 import org.xtext.lua.lua.Stat
 import org.xtext.lua.utils.StatUtil
+import org.xtext.lua.wrappers.LuaFunctionCall;
+import org.xtext.lua.wrappers.LuaFunctionDeclaration;
 import tools.vitruv.change.atomic.feature.FeatureEChange
+import cipm.consistency.cpr.luapcm.seffreconstruction.LuaFunctionCallUtil
+import org.xtext.lua.component_extension.ComponentUtil
 
 import "http://www.example.org/component_extension" as ce
 import "http://www.xtext.org/lua/Lua" as lua
@@ -183,7 +185,7 @@ reaction AddedParameter {
 	call {
 		//if (affectedEObject.eContainer instanceof Statement_Function_Declaration) {
 		val declaration = LuaPcmUpdateUtil.buildParentFunctionDeclarationOf(affectedEObject)
-		if (declaration != null) {
+		if (declaration !== null && declaration.getArgs().size() > 0) {
 			createParameter(newValue, declaration)
 		}
 	}
@@ -193,7 +195,9 @@ reaction RemovedParameter {
 	//after element lua::Referenceable removed from lua::Function[arguments]
 	after element lua::Referenceable removed from lua::ArgList[args]
 	call {
-		deleteParameter(oldValue)
+		if (LuaPcmUpdateUtil.isFunctionDeclarationArgument(oldValue)) {
+			deleteParameter(oldValue)
+		}
 	}
 }
 
@@ -393,7 +397,7 @@ reaction AddedFunctionCallStat {
 	call {
 		val functionCall = LuaPcmUpdateUtil.buildFunctionCall(affectedEObject)
 		//if (AppSpaceSemantics.isServingFunctionCall(affectedEObject)) {
-		if (functionCall !== null && functionCall.isExternal() && !functionCall.isMocked()) {
+		if (functionCall !== null && LuaFunctionCallUtil.isExternal(functionCall) && !functionCall.isMocked()) {
 			//var decl = AppSpaceSemantics.getFunctionDeclarationFromServingFunctionCall(affectedEObject)
 			var declaration = functionCall.getCalledFunction // null-check already performed by calling isMocked()
 			//if (decl !== null) {
@@ -409,7 +413,7 @@ reaction AddedFunctionCall {
 	after element lua::FunctionCall created
 	call {
 		val functionCall = LuaPcmUpdateUtil.buildFunctionCall(affectedEObject)
-		if (functionCall !== null && functionCall.isExternal() && !functionCall.isMocked()) {
+		if (functionCall !== null && LuaFunctionCallUtil.isExternal(functionCall) && !functionCall.isMocked()) {
 			var declaration = functionCall.getCalledFunction // null-check already performed by calling isMocked()
 			logger.info("ServeCall for declaration was added: " + declaration.name)
 			createSeffForDeclaration(declaration)
@@ -420,7 +424,7 @@ reaction AddedMethodCall {
 	after element lua::MethodCall created
 	call {
 		val functionCall = LuaPcmUpdateUtil.buildFunctionCall(affectedEObject)
-		if (functionCall !== null && functionCall.isExternal() && !functionCall.isMocked()) {
+		if (functionCall !== null && LuaFunctionCallUtil.isExternal(functionCall) && !functionCall.isMocked()) {
 			var declaration = functionCall.getCalledFunction // null-check already performed by calling isMocked()
 			logger.info("ServeCall for declaration was added: " + declaration.name)
 			createSeffForDeclaration(declaration)
@@ -542,7 +546,7 @@ routine tryRemoveSeffForServeCall(plain LuaFunctionCall as potentialServeCall) {
 routine createRDBehaviourForBlock(lua::Block block) {
 	match {
 		val rdBehaviour = retrieve optional pcm::ResourceDemandingBehaviour corresponding to block
-		val basicComponent = retrieve optional pcm::BasicComponent corresponding to LuaUtil.getComponent(block)
+		val basicComponent = retrieve optional pcm::BasicComponent corresponding to ComponentUtil.getComponent(block)
 		//val operationSignature = retrieve optional pcm::OperationSignature corresponding to LuaUtil.getDeclaration(block)
 		val operationSignature = retrieve optional pcm::OperationSignature corresponding to LuaPcmUpdateUtil.getParentFunctiondeclarationAsEObject(block)	
 		// TODO: jsaenz: not sure if this works as intended with the new Lua CM
@@ -876,6 +880,8 @@ routine createParameter(lua::Referenceable functionParameter, plain LuaFunctionD
 		val pcmParameter = new pcm::Parameter
 	}
 	update {
+		System.out.println("functionParameter: " + functionParameter);
+		System.out.println("functionDeclaration: " + functionDeclaration + ", name: " + functionDeclaration.getName() + ", args: " + functionDeclaration.getArgs())
 		pcmParameter.parameterName = functionParameter.name
 		pcmParameter.dataType__Parameter = luaAnyType
 
@@ -983,7 +989,7 @@ routine createActionsForStatement(EObject statement, lua::Block block) {
 			} else {
 				if (action instanceof ExternalCallAction) {
 					logger.debug("External call was found")
-					val componentOfStatement = LuaUtil.getComponent(statement)
+					val componentOfStatement = ComponentUtil.getComponent(statement)
 					createRequiredRoleForExternalCallAction(action, rdBehaviour.get, componentOfStatement)
 				}
 
@@ -1305,7 +1311,7 @@ routine removeRequiredRoleForExternalCallAction(pcm::ExternalCallAction action) 
 
 routine createOperationSignatureForStatementFunctionDeclaration(plain LuaFunctionDeclaration as functionDeclaration) {
 	match {
-		val operationInterface = retrieve pcm::OperationInterface corresponding to LuaUtil.getComponent(
+		val operationInterface = retrieve pcm::OperationInterface corresponding to ComponentUtil.getComponent(
 			functionDeclaration)
 		require absence of pcm::OperationSignature corresponding to functionDeclaration.getRoot
 		val luaAnyType = retrieve pcm::DataType corresponding to RepositoryPackage.Literals.REPOSITORY

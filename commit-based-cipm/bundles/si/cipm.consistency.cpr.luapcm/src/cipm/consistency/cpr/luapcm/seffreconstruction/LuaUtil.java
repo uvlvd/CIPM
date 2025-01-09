@@ -26,21 +26,11 @@ import org.xtext.lua.lua.RepeatLoop;
 import org.xtext.lua.lua.Stat;
 import org.xtext.lua.lua.WhileLoop;
 import org.xtext.lua.mocking.SyntheticVar;
+import org.xtext.lua.wrappers.LuaFunctionCall;
 
 public class LuaUtil {
 	
 	private LuaUtil() { }
-    
-    /**
-     * Returns true if the given Referenceable is mocked. The Lua CM is not able to resolve all
-     * references (e.g. because of the dynamic nature of some references) and will insert 
-     * mocks for these references.
-     */
-    public static boolean isMocked(final Referenceable ref) {
-    	// TODO: ensure that this functions correctly: SyntheticVar is only available via the org.xtext.lua package,
-    	// not via the org.xtext.lua.component_extension, which should be used by the Lua CM parser... (?)
-    	return ref instanceof SyntheticVar;
-    }
     
 	/**
 	 * Returns a list containing all the Blocks found in the given IfThenElse, in the following order:</br>
@@ -59,17 +49,6 @@ public class LuaUtil {
         			.forEach(blocks::add);
         					
         return blocks.stream().filter(Objects::nonNull).toList();
-
-//        if (ifStatement.getBlock() != null) {
-//            blocks.add(ifStatement.getBlock());
-//        }
-//        for (var elseIf : ifStatement.getElseIf()) {
-//            blocks.add(elseIf.getBlock());
-//        }
-//        if (ifStatement.getElseBlock() != null) {
-//            blocks.add(ifStatement.getElseBlock());
-//        }
-//        return blocks;
     }
     
     /**
@@ -114,142 +93,4 @@ public class LuaUtil {
         		|| stat instanceof RepeatLoop;
     }
     
-
-    
-    public static Component getComponent(final LuaFunctionCall functionCall) {
-    	return getComponent(functionCall.getCallingFeature());
-    }
-    
-    public static Component getComponent(final LuaFunctionDeclaration functionDeclaration) {
-    	return getComponent(functionDeclaration.getRoot());
-    }
-    
-    public static Component getComponent(final EObject eObj) {
-    	return EcoreUtil2.getContainerOfType(eObj, Component.class);
-    }
-    
-    /**
-     * Returns all {@link LuaFunctionCall}s that can be extracted from the given statement.
-     * @param stat the statment.
-     * @return the {@link LuaFunctionCall}s.
-     */
-    public static List<LuaFunctionCall> getFunctionCallsFromStat(final Stat stat) {
-    	var result = new ArrayList<LuaFunctionCall>();
-    	// handle function call statements
-    	if (stat instanceof FunctionCallStat functionCallStat) {
-    		final var functionCall = LuaFunctionCall.of(functionCallStat);
-    		if (functionCall != null) {
-    			result.add(functionCall);
-    		}
-    	} else { // handle other statements containing function/method calls
-	    	EcoreUtil2.getAllContentsOfType(stat, FunctionCall.class)
-	    			.stream()
-	    			.map(LuaFunctionCall::of)
-	    			.filter(Objects::nonNull)
-	    			.forEach(result::add);
-	    	EcoreUtil2.getAllContentsOfType(stat, MethodCall.class)
-	    			.stream()
-					.map(LuaFunctionCall::of)
-					.filter(Objects::nonNull)
-					.forEach(result::add);
-    	}
-    	return result;
-    } 
-    
-    /**
-     * Returns all non-mocked external function calls contained in the given object.
-     */
-    public static List<LuaFunctionCall> getExternalFunctionCallsContainedIn(final EObject root) {
-    	return getFunctionCallsContainedIn(root)
-    			.stream()
-    			.filter(fc -> !fc.isMocked())
-    			.filter(LuaFunctionCall::isExternal)
-    			.toList();
-    }
-    
-    
-    // TODO: create superclass for Lua FunctionCallStat,FunctionCall,MethodCall s.t. they can be handled
-    // together.. either in org.xtext.lua (maybe in lua.xtext?) or in this package as a helper class
-    public static List<LuaFunctionCall> getFunctionCallsContainedIn(final EObject root) {
-    	var result = new ArrayList<LuaFunctionCall>();
-    	EcoreUtil2.getAllContentsOfType(root, FunctionCallStat.class)
-    		.stream()
-    		.map(LuaFunctionCall::of)
-    		.filter(Objects::nonNull)
-    		.forEach(result::add);
-    	EcoreUtil2.getAllContentsOfType(root, FunctionCall.class)
-			.stream()
-			.map(LuaFunctionCall::of)
-			.filter(Objects::nonNull)
-			.forEach(result::add);
-    	EcoreUtil2.getAllContentsOfType(root, MethodCall.class)
-			.stream()
-			.map(LuaFunctionCall::of)
-			.filter(Objects::nonNull)
-			.forEach(result::add);
-    	return result;
-    }
-
-    // TODO: comment copied from getFunctionCallscontainedIn: create superclass for Lua FunctionCallStat,FunctionCall,MethodCall s.t. they can be handled
-    // together.. either in org.xtext.lua (maybe in lua.xtext?) or in this package as a helper class 
-    public static List<LuaFunctionDeclaration> getAllFunctionDeclarationsContainedIn(final EObject root) {
-    	var result = new ArrayList<LuaFunctionDeclaration>();
-    	EcoreUtil2.getAllContentsOfType(root, FunctionDeclaration.class)
-    		.stream()
-    		.map(LuaFunctionDeclaration::of)
-    		.filter(Objects::nonNull)
-    		.forEach(result::add);
-    	EcoreUtil2.getAllContentsOfType(root, LocalFunctionDeclaration.class)
-			.stream()
-			.map(LuaFunctionDeclaration::of)
-			.filter(Objects::nonNull)
-			.forEach(result::add);
-    	EcoreUtil2.getAllContentsOfType(root, ExpFunctionDeclaration.class)
-			.stream()
-			.map(LuaFunctionDeclaration::of)
-			.filter(Objects::nonNull)
-			.forEach(result::add);
-    	return result;
-    }
-    
-
-    
-    public static Block getBlockFromCalledFunction(LuaFunctionCall functionCall) {
-    	if (functionCall.getCalledFunction() == null) {
-    		return null;
-    	}
-    	return functionCall.getCalledFunction().getBlock();
-    }
-    
-	public static LuaFunctionDeclaration getReferencedFunction(Referenceable ref, int currDepth, final int maxDepth) {
-		if (currDepth > maxDepth) {
-			throw new RuntimeException("Reached max depth while attempting to get called function value from " + ref);
-		}
-		
-		if (ref instanceof FunctionDeclaration decl) {
-			return LuaFunctionDeclaration.of(decl);
-		}
-
-		if (ref instanceof LocalFunctionDeclaration decl) {
-			return LuaFunctionDeclaration.of(decl);
-		}
-		
-		if (ref instanceof ExpFunctionDeclaration decl) {
-			return LuaFunctionDeclaration.of(decl);
-		}
-		
-		if (LuaUtil.isMocked(ref)) {
-			return null;
-		}
-		
-		if (ref instanceof Referencing referencing) {
-			return getReferencedFunction(referencing.getRef(), ++currDepth, maxDepth);
-		}
-		
-		throw new RuntimeException("Could not find called function!");
-	}
-
-    
-
-
 }

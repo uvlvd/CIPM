@@ -13,9 +13,12 @@ import org.palladiosimulator.pcm.seff.AbstractAction;
 import org.palladiosimulator.pcm.seff.InternalCallAction;
 import org.palladiosimulator.pcm.seff.ResourceDemandingSEFF;
 import org.palladiosimulator.pcm.seff.SeffFactory;
+import org.xtext.lua.component_extension.ComponentUtil;
 import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.IfThenElse;
 import org.xtext.lua.lua.Stat;
+import org.xtext.lua.wrappers.LuaFunctionCall;
+import org.xtext.lua.wrappers.LuaFunctionDeclaration;
 
 import cipm.consistency.cpr.luapcm.Config;
 import cipm.consistency.cpr.luapcm.Config.ReconstructionType;
@@ -146,7 +149,7 @@ public final class ActionReconstruction {
         List<AbstractAction> actions = new ArrayList<>();
 
         // all function calls in this statement (or the statement may be a call itself)
-        final var functionCalls = LuaUtil.getFunctionCallsFromStat(statement)
+        final var functionCalls = LuaFunctionCallUtil.getFunctionCallsFromStat(statement)
         		.stream() // we can only reconstruct for non-mocked function calls
         		.filter(fc -> !fc.isMocked())
         		.toList();
@@ -194,7 +197,7 @@ public final class ActionReconstruction {
     	final var calledFunction = functionCall.getCalledFunction();
 
         // if we call another of our own seffs we use their step behaviour
-        if (functionCall.isInternal()) {
+        if (LuaFunctionCallUtil.isInternal(functionCall)) {
             if (SeffHelper.needsSeffReconstruction(calledFunction)) {
             	// TODO: get fully qualified name for logging
                 LOGGER.trace("Call classification: Internal call to SEFF " + calledFunction.getName());
@@ -266,7 +269,7 @@ public final class ActionReconstruction {
      */
     private InternalCallAction reconstructInternalSeffCallAsInternalCallAction(final LuaFunctionCall functionCall) {
         final var calledFunction = functionCall.getCalledFunction();
-        final var calledComponent = LuaUtil.getComponent(calledFunction);
+        final var calledComponent = ComponentUtil.getComponent(calledFunction);
 
         // internal call
         // TODO: get fully qualified name for logging
@@ -276,7 +279,7 @@ public final class ActionReconstruction {
             internalCallAction.setEntityName("CALL_TO_INTERNAL_SEFF " + calledFunction.getName());
         }
 
-        final var calledFunctionRootBlock = LuaUtil.getBlockFromCalledFunction(functionCall);
+        final var calledFunctionRootBlock = LuaFunctionCallUtil.getBlockFromCalledFunction(functionCall);
         
         final var rdSeff = CorrespondenceUtil.getCorrespondingEObjectByType(
 			        			correspondenceModelView, 
@@ -319,7 +322,7 @@ public final class ActionReconstruction {
      */
     private AbstractAction reconstructExternalSeffCall(final LuaFunctionCall functionCall) {
         var calledFunction = functionCall.getCalledFunction();
-        var calledComponent = LuaUtil.getComponent(calledFunction);
+        var calledComponent = ComponentUtil.getComponent(calledFunction);
 
         // external call
         var externalCallAction = SeffFactory.eINSTANCE.createExternalCallAction();
@@ -403,7 +406,7 @@ public final class ActionReconstruction {
             final ComponentSetInfo info
             ) {
     	
-    	final var calls = LuaUtil.getFunctionCallsFromStat(stat);
+    	final var calls = LuaFunctionCallUtil.getFunctionCallsFromStat(stat);
     	for (var call : calls) {
             if (isCallArchitecturallyRelevant(call, info)) {
             	// TODO: should probably print fully qualified name here...
@@ -434,13 +437,18 @@ public final class ActionReconstruction {
     	
     	
     	final var calledFunction = functionCall.getCalledFunction();
+    	if (calledFunction == null) {
+    		// could not find function refrenced by function call
+    		return false;
+    	}
+    	
         final var calledFunctionHasSeff = info.needsSeffReconstruction(calledFunction);
         
         return !functionCall.isMocked()
                 && (
-                		functionCall.isExternal()
+                		LuaFunctionCallUtil.isExternal(functionCall)
                         || (Config.getReconstructionTypeInternalSeffCall() == ReconstructionType.InternalCallAction
-                                && functionCall.isInternal() 
+                                && LuaFunctionCallUtil.isInternal(functionCall) 
                                 && calledFunctionHasSeff)
                    );
         
